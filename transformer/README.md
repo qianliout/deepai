@@ -133,3 +133,8 @@ python main.py interactive
 ## 许可证
 
 MIT License
+
+对于transformer还有几个点，你没有做好，现在改正
+1，对于所有tensor格式的变量或参数，请在注释中写上详细的shape
+2,增加详细注释，写明数据流转，让我在学习过程中知道数据是怎么一步一步的流转的
+3:对于各种mask的计算，我还不理解，请你在注释中这明计算过程：self_attn_mask,cross_attn_mask

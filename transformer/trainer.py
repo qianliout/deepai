@@ -184,21 +184,28 @@ class Trainer:
 
         for batch_idx, batch in enumerate(train_loader):
             # 移动数据到设备
+            # encoder_input: [batch_size, src_seq_len] - 编码器输入token序列
+            # decoder_input: [batch_size, tgt_seq_len-1] - 解码器输入序列
+            # decoder_target: [batch_size, tgt_seq_len-1] - 解码器目标序列
             encoder_input = batch["encoder_input"].to(self.device)
             decoder_input = batch["decoder_input"].to(self.device)
             decoder_target = batch["decoder_target"].to(self.device)
 
             # 前向传播
             self.optimizer.zero_grad()
+            # output: [batch_size, tgt_seq_len-1, vocab_size_it] - 模型输出logits
             output = self.model(encoder_input, decoder_input)
 
             # 计算损失
+            # output: [batch_size, tgt_seq_len-1, vocab_size_it]
+            # decoder_target: [batch_size, tgt_seq_len-1]
+            # loss: scalar - 交叉熵损失
             loss = self.criterion(output, decoder_target)
 
             # 反向传播
             loss.backward()
 
-            # 梯度裁剪
+            # 梯度裁剪 - 防止梯度爆炸
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
 
             # 更新参数
@@ -206,10 +213,11 @@ class Trainer:
             lr = self.scheduler.step()
 
             # 统计
-            # 统计当前批次（batch）中 有效token的数量 （排除填充token）,.item()将结果从张量转换为Python数值
-            # 示例 ：若 decoder_target 为 [1, 2, 0, 0] （后两个为填充），则结果为2
+            # 统计当前批次中有效token的数量（排除填充token）
+            # decoder_target: [batch_size, tgt_seq_len-1] -> batch_tokens: scalar
+            # 示例：若decoder_target为[[1, 2, 0, 0], [3, 4, 5, 0]]（0是PAD），则结果为5
             batch_tokens = (decoder_target != 0).sum().item()
-            # loss.item() ：当前批次的平均损失（每个token的损失均值）
+            # loss.item(): 当前批次的平均损失（每个token的损失均值）
             total_loss += loss.item() * batch_tokens
             total_tokens += batch_tokens
             self.global_step += 1
@@ -354,7 +362,16 @@ class Trainer:
         self.logger.info(f"成功加载模型: {model_path}")
 
     def translate(self, text: str, max_length: int = 50) -> str:
-        """翻译单个句子"""
+        """
+        翻译单个句子 - 使用贪心搜索进行推理
+
+        Args:
+            text: 输入的英语文本
+            max_length: 最大生成长度
+
+        Returns:
+            翻译后的意大利语文本
+        """
         if self.model is None:
             raise RuntimeError("模型未初始化，请先训练或加载模型")
 
@@ -362,26 +379,40 @@ class Trainer:
         tokenizer = self.data_manager.get_tokenizer()
 
         with torch.no_grad():
-            # 编码输入
+            # 编码输入文本
+            # src_tokens: [src_seq_len] - 英语token ID序列
             src_tokens = tokenizer.encode(text, 'en', MODEL_CONFIG.max_seq_len)
+            # src: [1, src_seq_len] - 添加batch维度
             src = torch.tensor([src_tokens], device=self.device)
 
-            # 编码
+            # 编码阶段
+            # encoder_output: [1, src_seq_len, d_model] - 编码器输出表示
             encoder_output = self.model.encode(src)
 
-            # 解码 - 贪心搜索
+            # 解码阶段 - 贪心搜索
+            # tgt: [1, 1] - 初始化为BOS token
             tgt = torch.tensor([[tokenizer.bos_id]], device=self.device)
 
             for _ in range(max_length):
+                # 解码一步
+                # output: [1, current_tgt_len, vocab_size_it] - 当前步的输出logits
                 output = self.model.decode_step(tgt, encoder_output)
+
+                # 贪心选择下一个token
+                # output[:, -1, :]: [1, vocab_size_it] - 最后一个位置的logits
+                # next_token: [1, 1] - 概率最大的token ID
                 next_token = output[:, -1, :].argmax(dim=-1, keepdim=True)
+
+                # 拼接新token
+                # tgt: [1, current_tgt_len] -> [1, current_tgt_len+1]
                 tgt = torch.cat([tgt, next_token], dim=1)
 
-                # 如果生成了EOS token，停止
+                # 如果生成了EOS token，停止生成
                 if next_token.item() == tokenizer.eos_id:
                     break
 
-            # 解码输出
+            # 解码输出为文本
+            # tgt_tokens: [tgt_seq_len] - 生成的token ID序列
             tgt_tokens = tgt[0].cpu().tolist()
             translation = tokenizer.decode(tgt_tokens, 'it')
 

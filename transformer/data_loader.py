@@ -44,23 +44,32 @@ class TranslationDataset(Dataset):
             idx: 数据索引
 
         Returns:
-            包含编码后数据的字典
+            包含编码后数据的字典，所有tensor shape为 [seq_len]
+            - encoder_input: [src_seq_len] - 编码器输入token序列
+            - decoder_input: [tgt_seq_len-1] - 解码器输入序列（去掉EOS）
+            - decoder_target: [tgt_seq_len-1] - 解码器目标序列（去掉BOS）
         """
         en_text, it_text = self.data[idx]
 
-        # 编码
+        # 编码文本为token ID序列
+        # en_ids: [src_seq_len] - 英语token ID序列，包含BOS和EOS
+        # it_ids: [tgt_seq_len] - 意大利语token ID序列，包含BOS和EOS
         en_ids = self.tokenizer.encode(en_text, "en", self.max_length)
         it_ids = self.tokenizer.encode(it_text, "it", self.max_length)
 
-        # 是否加bos，eos，已总结成笔记
+        # 构造训练样本
+        # Teacher Forcing: 解码器输入和目标错位一个位置
         return {
+            # 编码器输入: [src_seq_len] - 完整的英语序列
             "encoder_input": torch.tensor(en_ids, dtype=torch.long),
-            "decoder_input": torch.tensor(
-                it_ids[:-1], dtype=torch.long
-            ),  # 去掉最后的EOS
-            "decoder_target": torch.tensor(
-                it_ids[1:], dtype=torch.long
-            ),  # 去掉开头的BOS
+
+            # 解码器输入: [tgt_seq_len-1] - 意大利语序列去掉最后的EOS
+            # 用于解码器的输入，包含BOS但不包含EOS
+            "decoder_input": torch.tensor(it_ids[:-1], dtype=torch.long),
+
+            # 解码器目标: [tgt_seq_len-1] - 意大利语序列去掉开头的BOS
+            # 用于计算损失，包含EOS但不包含BOS
+            "decoder_target": torch.tensor(it_ids[1:], dtype=torch.long),
         }
 
 
