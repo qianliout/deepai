@@ -13,83 +13,27 @@
 - 📋 **完整日志**: 详细的训练日志和进度跟踪
 - 💾 **模型保存**: 支持模型检查点保存和加载
 
-## 项目结构
-
-```
-transformer/auge/
-├── config.py          # 配置文件（Pydantic数据结构）
-├── utils.py           # 工具函数（日志、文件操作等）
-├── tokenizer.py       # 自实现分词器
-├── data_loader.py     # 数据加载和处理
-├── model.py           # Transformer模型实现
-├── trainer.py         # 训练器
-├── main.py            # 主入口文件
-├── inference.py       # 推理脚本
-├── requirements.txt   # 依赖包
-└── README.md          # 说明文档
-```
-
 ## 安装依赖
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## 快速开始
-
-### 1. 训练模型
+## 使用示例
 
 ```bash
-# 使用默认配置训练
-python main.py --mode train
+# 1. 快速验证流程
+python main.py quick
 
-# 使用自定义配置文件训练
-python main.py --mode train --config my_config.json
+# 2. 正式训练
+python main.py train
+
+# 3. 测试模型
+python main.py test
+
+# 4. 交互式翻译
+python main.py interactive
 ```
-
-### 2. 测试模型
-
-```bash
-# 测试训练好的模型
-python main.py --mode test --model_path ./saved_models/best_model_epoch_10.pt
-```
-
-### 3. 交互式翻译
-
-```bash
-# 交互式翻译
-python inference.py --model_path ./saved_models/best_model_epoch_10.pt --mode interactive
-
-# 单句翻译
-python inference.py --model_path ./saved_models/best_model_epoch_10.pt --mode single --text "Hello, how are you?"
-
-# 批量翻译
-python inference.py --model_path ./saved_models/best_model_epoch_10.pt --mode batch --input_file input.txt --output_file output.txt
-```
-
-## 配置说明
-
-### 模型配置
-- `d_model`: 模型隐藏层维度 (默认: 512)
-- `d_ff`: 前馈网络维度 (默认: 2048)
-- `n_heads`: 多头注意力头数 (默认: 8)
-- `n_layers`: 编码器/解码器层数 (默认: 6)
-- `max_seq_len`: 最大序列长度 (默认: 128)
-- `dropout`: Dropout概率 (默认: 0.1)
-
-### 训练配置
-- `train_size`: 训练数据大小 (默认: 10000)
-- `val_size`: 验证数据大小 (默认: 2000)
-- `batch_size`: 批次大小 (默认: 32)
-- `learning_rate`: 学习率 (默认: 1e-4)
-- `num_epochs`: 训练轮数 (默认: 10)
-- `device`: 训练设备 (自动检测: mps/cuda/cpu)
-
-### 数据配置
-- `dataset_name`: 数据集名称 (默认: "Helsinki-NLP/opus_books")
-- `language_pair`: 语言对 (默认: "en-it")
-- `min_freq`: 词汇最小频率 (默认: 2)
-- `max_vocab_size`: 最大词汇表大小 (默认: 10000)
 
 ## 模型架构
 

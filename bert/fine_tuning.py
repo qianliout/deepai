@@ -55,14 +55,20 @@ class BertFineTuner:
 
         # 模型配置 - 使用统一的配置管理
         if pretrained_model_path is None:
-            self.pretrained_model_path = Path(TRAINING_CONFIG.pretrained_model_path)
+            self.pretrained_model_path = Path(TRAINING_CONFIG.pretrain_best_dir)
         else:
             self.pretrained_model_path = Path(pretrained_model_path)
         self.num_labels = num_labels
 
         # 创建微调模型保存目录 - 使用统一的配置管理
-        self.fine_tuning_save_dir = Path(TRAINING_CONFIG.fine_tuning_save_dir)
-        self.fine_tuning_save_dir.mkdir(parents=True, exist_ok=True)
+        self.checkpoints_dir = Path(TRAINING_CONFIG.finetuning_checkpoints_dir)
+        self.best_model_dir = Path(TRAINING_CONFIG.finetuning_best_dir)
+        self.final_model_dir = Path(TRAINING_CONFIG.finetuning_final_dir)
+
+        # 创建所有必要的目录
+        self.checkpoints_dir.mkdir(parents=True, exist_ok=True)
+        self.best_model_dir.mkdir(parents=True, exist_ok=True)
+        self.final_model_dir.mkdir(parents=True, exist_ok=True)
 
         # 初始化tokenizer
         self.tokenizer = self._load_tokenizer()
@@ -395,38 +401,32 @@ class BertFineTuner:
 
     def _save_best_model(self):
         """保存最佳模型"""
-        best_model_dir = self.fine_tuning_save_dir / "best_model"
-        best_model_dir.mkdir(exist_ok=True)
+        torch.save(self.model.state_dict(), self.best_model_dir / "pytorch_model.bin")
 
-        torch.save(self.model.state_dict(), best_model_dir / "pytorch_model.bin")
-
-        with open(best_model_dir / "config.json", "w") as f:
+        with open(self.best_model_dir / "config.json", "w") as f:
             config_dict = BERT_CONFIG.model_dump()
             config_dict["num_labels"] = self.num_labels
             json.dump(config_dict, f, indent=2)
 
-        logger.info(f"保存最佳模型，准确率: {self.best_accuracy:.4f}")
+        logger.info(f"保存最佳模型到 {self.best_model_dir}，准确率: {self.best_accuracy:.4f}")
 
     def _save_final_model(self):
         """保存最终模型"""
-        final_model_dir = self.fine_tuning_save_dir / "final_model"
-        final_model_dir.mkdir(exist_ok=True)
+        torch.save(self.model.state_dict(), self.final_model_dir / "pytorch_model.bin")
 
-        torch.save(self.model.state_dict(), final_model_dir / "pytorch_model.bin")
-
-        with open(final_model_dir / "config.json", "w") as f:
+        with open(self.final_model_dir / "config.json", "w") as f:
             config_dict = BERT_CONFIG.model_dump()
             config_dict["num_labels"] = self.num_labels
             json.dump(config_dict, f, indent=2)
 
-        logger.info("保存最终模型")
+        logger.info(f"保存最终模型到 {self.final_model_dir}")
 
     def _save_training_history(self):
         """保存训练历史"""
-        with open(self.fine_tuning_save_dir / "fine_tuning_history.json", "w") as f:
+        with open(self.checkpoints_dir / "fine_tuning_history.json", "w") as f:
             json.dump(self.training_history, f, indent=2)
 
-        logger.info("保存微调历史")
+        logger.info(f"保存微调历史到 {self.checkpoints_dir}/fine_tuning_history.json")
 
 
 def fine_tune_bert(pretrained_model_path: Optional[str] = None, num_labels: int = 2) -> Dict[str, Any]:
@@ -445,7 +445,9 @@ def fine_tune_bert(pretrained_model_path: Optional[str] = None, num_labels: int 
 
     print("\n🎉 微调完成！")
     print(f"最佳准确率: {fine_tuner.best_accuracy:.4f}")
-    print(f"微调模型保存目录: {fine_tuner.fine_tuning_save_dir}")
+    print(f"检查点目录: {fine_tuner.checkpoints_dir}")
+    print(f"最佳模型目录: {fine_tuner.best_model_dir}")
+    print(f"最终模型目录: {fine_tuner.final_model_dir}")
 
     return history
 
@@ -460,7 +462,7 @@ def main():
         print(f"使用指定的预训练模型路径: {pretrained_model_path}")
     else:
         pretrained_model_path = None
-        print(f"使用配置中的默认预训练模型路径: {TRAINING_CONFIG.pretrained_model_path}")
+        print(f"使用配置中的默认预训练模型路径: {TRAINING_CONFIG.pretrain_best_dir}")
 
     history = fine_tune_bert(pretrained_model_path)
     print(f"训练历史已保存")

@@ -1,14 +1,14 @@
 """
-主入口文件 - 一键运行训练和测试
+Transformer主入口文件 - 统一的训练和推理入口
+支持训练、测试、推理等所有功能
 """
 import os
 import sys
 import torch
 import argparse
-import logging
-from config import Config, default_config, create_directories
+
+from config import MODEL_CONFIG, TRAINING_CONFIG, DATA_CONFIG, create_directories, get_device, print_config
 from trainer import Trainer
-from utils import setup_logging, get_device
 
 
 def setup_environment():
@@ -22,9 +22,9 @@ def setup_environment():
     device = get_device()
     print(f"检测到设备: {device}")
 
-    if device == "mps":
+    if str(device) == "mps":
         print("使用Apple Silicon GPU (MPS)")
-    elif device == "cuda":
+    elif str(device) == "cuda":
         print("使用NVIDIA GPU")
     else:
         print("使用CPU")
@@ -32,63 +32,32 @@ def setup_environment():
     return device
 
 
-def create_directories(config: Config):
-    """创建必要的目录"""
-    directories = [
-        config.training.model_save_path,
-        config.training.vocab_save_path,
-        config.training.log_dir,
-        config.data.cache_dir
-    ]
+def check_dependencies():
+    """检查依赖包"""
+    print("检查依赖包...")
 
-    for directory in directories:
-        os.makedirs(directory, exist_ok=True)
-        print(f"创建目录: {directory}")
+    required_packages = ["torch", "pydantic", "datasets", "numpy", "tqdm"]
+    missing_packages = []
 
+    for package in required_packages:
+        try:
+            __import__(package)
+            print(f"✓ {package}")
+        except ImportError:
+            missing_packages.append(package)
+            print(f"✗ {package} (缺失)")
 
-def print_config(config: Config):
-    """打印配置信息"""
-    print("\n" + "="*50)
-    print("配置信息")
-    print("="*50)
+    if missing_packages:
+        print(f"\n缺失依赖包: {', '.join(missing_packages)}")
+        print("请运行: pip install -r requirements.txt")
+        return False
 
-    print(f"模型配置:")
-    print(f"  - 模型维度: {config.model.d_model}")
-    print(f"  - 注意力头数: {config.model.n_heads}")
-    print(f"  - 编码器/解码器层数: {config.model.n_layers}")
-    print(f"  - 前馈网络维度: {config.model.d_ff}")
-    print(f"  - 最大序列长度: {config.model.max_seq_len}")
-    print(f"  - Dropout: {config.model.dropout}")
-
-    print(f"\n训练配置:")
-    print(f"  - 训练数据大小: {config.training.train_size}")
-    print(f"  - 验证数据大小: {config.training.val_size}")
-    print(f"  - 批次大小: {config.training.batch_size}")
-    print(f"  - 学习率: {config.training.learning_rate}")
-    print(f"  - 训练轮数: {config.training.num_epochs}")
-    print(f"  - 设备: {config.training.device}")
-
-    print(f"\n数据配置:")
-    print(f"  - 数据集: {config.data.dataset_name}")
-    print(f"  - 语言对: {config.data.language_pair}")
-    print(f"  - 最小词频: {config.data.min_freq}")
-    print(f"  - 最大词汇表大小: {config.data.max_vocab_size}")
-
-    print("="*50 + "\n")
+    print("所有依赖包已安装 ✓")
+    return True
 
 
 def simple_translate_test(trainer: Trainer):
     """简单的翻译测试"""
-    print("\n" + "="*50)
-    print("简单翻译测试")
-    print("="*50)
-
-    # 获取分词器
-    tokenizer = trainer.get_tokenizer()
-    model = trainer.model
-    device = trainer.device
-
-    # 测试句子
     test_sentences = [
         "Hello, how are you?",
         "I love programming.",
@@ -97,132 +66,181 @@ def simple_translate_test(trainer: Trainer):
         "Good morning!"
     ]
 
-    model.eval()
-    with torch.no_grad():
-        for en_text in test_sentences:
-            print(f"\n英语: {en_text}")
+    print("\n" + "="*50)
+    print("简单翻译测试")
+    print("="*50)
 
-            try:
-                # 编码输入
-                en_ids = tokenizer.encode(en_text, 'en', tokenizer.config.max_seq_len)
-                src = torch.tensor([en_ids], device=device)
+    for sentence in test_sentences:
+        try:
+            translation = trainer.translate(sentence)
+            print(f"英语: {sentence}")
+            print(f"意大利语: {translation}")
+            print("-" * 30)
+        except Exception as e:
+            print(f"翻译失败: {sentence} -> 错误: {e}")
 
-                # 编码
-                encoder_output = model.encode(src)
 
-                # 简单的贪心解码
-                max_len = tokenizer.config.max_seq_len
-                tgt = torch.tensor([[tokenizer.bos_id]], device=device)
+def train_model():
+    """训练模型"""
+    print("\n开始训练...")
 
-                for _ in range(max_len - 1):
-                    output = model.decode_step(tgt, encoder_output)
-                    next_token = output[:, -1, :].argmax(dim=-1, keepdim=True)
-                    tgt = torch.cat([tgt, next_token], dim=1)
+    # 创建训练器
+    trainer = Trainer()
 
-                    # 如果生成了EOS token，停止
-                    if next_token.item() == tokenizer.eos_id:
-                        break
+    # 训练
+    trainer.train()
 
-                # 解码输出
-                it_ids = tgt[0].cpu().tolist()
-                it_text = tokenizer.decode(it_ids, 'it')
-                print(f"意大利语: {it_text}")
+    print("训练完成!")
 
-            except Exception as e:
-                print(f"翻译失败: {e}")
+    # 简单测试
+    simple_translate_test(trainer)
 
-    print("="*50 + "\n")
+
+def test_model(model_path: str = None):
+    """测试模型"""
+    print("\n开始测试...")
+
+    # 创建训练器
+    trainer = Trainer()
+
+    # 加载模型
+    if model_path and os.path.exists(model_path):
+        trainer.load_model(model_path)
+        print(f"加载模型: {model_path}")
+    else:
+        # 查找最新的模型
+        model_dir = TRAINING_CONFIG.pretrain_best_dir
+        if os.path.exists(model_dir):
+            model_files = [f for f in os.listdir(model_dir) if f.endswith('.pt')]
+            if model_files:
+                model_file = sorted(model_files)[-1]
+                model_path = os.path.join(model_dir, model_file)
+                trainer.load_model(model_path)
+                print(f"自动加载模型: {model_path}")
+            else:
+                print("未找到模型文件，请先训练模型")
+                return
+        else:
+            print("模型目录不存在，请先训练模型")
+            return
+
+    # 测试
+    simple_translate_test(trainer)
+
+
+def interactive_translate():
+    """交互式翻译"""
+    print("\n" + "=" * 60)
+    print("交互式翻译")
+    print("=" * 60)
+
+    # 查找模型文件
+    model_dir = TRAINING_CONFIG.pretrain_best_dir
+    if not os.path.exists(model_dir):
+        print("未找到模型目录，请先训练模型")
+        return
+
+    model_files = [f for f in os.listdir(model_dir) if f.endswith(".pt")]
+    if not model_files:
+        print("未找到模型文件，请先训练模型")
+        return
+
+    # 选择模型
+    model_file = sorted(model_files)[-1]
+    model_path = os.path.join(model_dir, model_file)
+    print(f"使用模型: {model_path}")
+
+    # 创建训练器并加载模型
+    trainer = Trainer()
+    trainer.load_model(model_path)
+
+    print("输入英语句子进行翻译，输入 'quit' 退出")
+    print("-" * 60)
+
+    try:
+        while True:
+            text = input("英语: ").strip()
+            if text.lower() in ['quit', 'exit', 'q']:
+                break
+            if text:
+                try:
+                    translation = trainer.translate(text)
+                    print(f"意大利语: {translation}")
+                except Exception as e:
+                    print(f"翻译失败: {e}")
+            print("-" * 30)
+    except KeyboardInterrupt:
+        print("\n退出交互式翻译")
+
+
+def quick_test():
+    """快速测试模式 - 使用较小的参数快速验证模型流程"""
+    print("\n🚀 快速测试模式")
+    print("=" * 60)
+    
+    # 更新配置为快速测试参数
+    TRAINING_CONFIG.train_size = 1000
+    TRAINING_CONFIG.val_size = 200
+    TRAINING_CONFIG.batch_size = 16
+    TRAINING_CONFIG.num_epochs = 1
+    TRAINING_CONFIG.log_interval = 50
+    TRAINING_CONFIG.save_interval = 500
+    
+    # 更新目录为快速测试目录
+    base_dir = "/Users/liuqianli/work/python/deepai/saved_model/transformer/quick_test"
+    TRAINING_CONFIG.pretrain_checkpoints_dir = f"{base_dir}/pretrain/checkpoints"
+    TRAINING_CONFIG.pretrain_best_dir = f"{base_dir}/pretrain/best"
+    TRAINING_CONFIG.pretrain_final_dir = f"{base_dir}/pretrain/final"
+    TRAINING_CONFIG.pretrain_vocab_dir = f"{base_dir}/pretrain/vocab"
+    TRAINING_CONFIG.log_dir = f"{base_dir}/logs"
+    
+    print("快速测试配置:")
+    print(f"  训练数据: {TRAINING_CONFIG.train_size}")
+    print(f"  验证数据: {TRAINING_CONFIG.val_size}")
+    print(f"  批次大小: {TRAINING_CONFIG.batch_size}")
+    print(f"  训练轮数: {TRAINING_CONFIG.num_epochs}")
+    print(f"  保存目录: {base_dir}")
+    
+    # 创建目录
+    create_directories()
+    
+    # 训练模型
+    train_model()
 
 
 def main():
     """主函数"""
-    parser = argparse.ArgumentParser(description="Transformer训练和测试")
-    parser.add_argument('--config', type=str, help='配置文件路径')
-    parser.add_argument('--mode', type=str, choices=['train', 'test'], default='train',
-                       help='运行模式: train(训练) 或 test(测试)')
-    parser.add_argument('--model_path', type=str, help='测试时使用的模型路径')
+    parser = argparse.ArgumentParser(description="Transformer训练和推理")
+    parser.add_argument("mode", nargs="?", default="train", 
+                       choices=["train", "test", "interactive", "quick"], 
+                       help="运行模式: train(训练), test(测试), interactive(交互式翻译), quick(快速测试)")
+    parser.add_argument("--model_path", type=str, help="模型文件路径（用于测试）")
 
     args = parser.parse_args()
-
-    print("Transformer从零实现 - 英语到意大利语翻译")
-    print("="*60)
 
     # 设置环境
     device = setup_environment()
 
-    # 加载配置
-    if args.config and os.path.exists(args.config):
-        config = Config.load_config(args.config)
-        print(f"从文件加载配置: {args.config}")
-    else:
-        config = default_config
-        print("使用默认配置")
+    # 检查依赖
+    if not check_dependencies():
+        return
 
-    # 更新设备配置
-    config.training.device = device
+    # 打印配置
+    print_config()
 
     # 创建目录
-    create_directories()
+    if args.mode != "quick":
+        create_directories()
 
-    # 打印配置信息
-    print(f"模型保存目录: {config.training.model_save_dir}")
-    print(f"日志保存目录: {config.training.log_dir}")
-    print(f"数据缓存目录: {config.training.cache_dir}")
-
-    if args.mode == 'train':
-        # 训练模式
-        print("开始训练...")
-
-        try:
-            # 创建训练器
-            trainer = Trainer(config)
-
-            # 开始训练
-            trainer.train()
-
-            print("\n训练完成!")
-
-            # 简单测试
-            print("\n进行简单翻译测试...")
-            simple_translate_test(trainer)
-
-        except KeyboardInterrupt:
-            print("\n训练被用户中断")
-        except Exception as e:
-            print(f"\n训练过程中出现错误: {e}")
-            import traceback
-            traceback.print_exc()
-
-    elif args.mode == 'test':
-        # 测试模式
-        if not args.model_path:
-            print("测试模式需要指定模型路径 --model_path")
-            return
-
-        if not os.path.exists(args.model_path):
-            print(f"模型文件不存在: {args.model_path}")
-            return
-
-        print(f"加载模型进行测试: {args.model_path}")
-
-        try:
-            # 创建训练器（用于加载模型）
-            trainer = Trainer(config)
-            trainer.setup_model()
-
-            # 加载模型
-            checkpoint = torch.load(args.model_path, map_location=device)
-            trainer.model.load_state_dict(checkpoint['model_state_dict'])
-
-            print("模型加载成功")
-
-            # 进行测试
-            simple_translate_test(trainer)
-
-        except Exception as e:
-            print(f"测试过程中出现错误: {e}")
-            import traceback
-            traceback.print_exc()
+    # 根据模式执行
+    if args.mode == "train":
+        train_model()
+    elif args.mode == "test":
+        test_model(args.model_path)
+    elif args.mode == "interactive":
+        interactive_translate()
+    elif args.mode == "quick":
+        quick_test()
 
 
 if __name__ == "__main__":

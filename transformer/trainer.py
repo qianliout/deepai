@@ -10,7 +10,7 @@ import os
 import time
 import math
 from typing import Dict, Optional
-from config import Config
+from config import MODEL_CONFIG, TRAINING_CONFIG, DATA_CONFIG, get_device
 from model import Transformer
 from data_loader import DataManager
 from utils import setup_logging, save_model, count_parameters, format_time
@@ -111,19 +111,15 @@ class Trainer:
     训练器类
     """
 
-    def __init__(self, config: Config):
+    def __init__(self):
         """
         初始化训练器
-
-        Args:
-            config: 配置对象
         """
-        self.config = config
-        self.device = config.training.device
-        self.logger = setup_logging(config.training.log_dir)
+        self.device = get_device()
+        self.logger = setup_logging(TRAINING_CONFIG.log_dir)
 
         # 数据管理器
-        self.data_manager = DataManager(config)
+        self.data_manager = DataManager()
 
         # 模型
         self.model: Optional[Transformer] = None
@@ -143,7 +139,7 @@ class Trainer:
         self.logger.info("正在设置模型...")
 
         # 创建模型
-        self.model = Transformer(self.config.model).to(self.device)
+        self.model = Transformer(MODEL_CONFIG).to(self.device)
 
         # 计算参数数量
         param_count = count_parameters(self.model)
@@ -152,19 +148,19 @@ class Trainer:
         # 优化器
         self.optimizer = optim.Adam(
             self.model.parameters(),
-            lr=self.config.training.learning_rate,
-            betas=(0.9, 0.98), # 这个参数是啥作用
+            lr=TRAINING_CONFIG.learning_rate,
+            betas=(0.9, 0.98),
             eps=1e-9,
         )
 
         # 学习率调度器
         self.scheduler = WarmupScheduler(
-            self.optimizer, self.config.model.d_model, self.config.training.warmup_steps
+            self.optimizer, MODEL_CONFIG.d_model, TRAINING_CONFIG.warmup_steps
         )
 
         # 损失函数
         self.criterion = LabelSmoothingLoss(
-            vocab_size=self.config.model.vocab_size_it,
+            vocab_size=MODEL_CONFIG.vocab_size_it,
             smoothing=0.1,
             ignore_index=0,  # PAD token
         )
@@ -219,7 +215,7 @@ class Trainer:
             self.global_step += 1
 
             # 日志
-            if batch_idx % self.config.training.log_interval == 0:
+            if batch_idx % TRAINING_CONFIG.log_interval == 0:
                 elapsed = time.time() - start_time
                 self.logger.info(
                     f"Epoch {self.current_epoch}, Batch {batch_idx}/{len(train_loader)}, "
@@ -276,14 +272,16 @@ class Trainer:
         self.setup_model()
 
         # 创建保存目录
-        os.makedirs(self.config.training.model_save_dir, exist_ok=True)
+        os.makedirs(TRAINING_CONFIG.pretrain_checkpoints_dir, exist_ok=True)
+        os.makedirs(TRAINING_CONFIG.pretrain_best_dir, exist_ok=True)
+        os.makedirs(TRAINING_CONFIG.pretrain_final_dir, exist_ok=True)
 
         # 训练循环
-        for epoch in range(self.config.training.num_epochs):
+        for epoch in range(TRAINING_CONFIG.num_epochs):
             self.current_epoch = epoch
 
             self.logger.info(
-                f"开始第 {epoch + 1}/{self.config.training.num_epochs} 轮训练"
+                f"开始第 {epoch + 1}/{TRAINING_CONFIG.num_epochs} 轮训练"
             )
 
             # 训练
@@ -305,7 +303,7 @@ class Trainer:
             if val_metrics["loss"] < self.best_val_loss:
                 self.best_val_loss = val_metrics["loss"]
                 model_path = os.path.join(
-                    self.config.training.model_save_dir,
+                    TRAINING_CONFIG.pretrain_best_dir,
                     f"best_model_epoch_{epoch + 1}.pt",
                 )
                 save_model(
@@ -316,7 +314,7 @@ class Trainer:
             # 定期保存检查点
             if (epoch + 1) % 5 == 0:
                 checkpoint_path = os.path.join(
-                    self.config.training.model_save_dir,
+                    TRAINING_CONFIG.pretrain_checkpoints_dir,
                     f"checkpoint_epoch_{epoch + 1}.pt",
                 )
                 save_model(
@@ -327,7 +325,67 @@ class Trainer:
                     checkpoint_path,
                 )
 
+        # 保存最终模型
+        final_model_path = os.path.join(
+            TRAINING_CONFIG.pretrain_final_dir,
+            "final_model.pt",
+        )
+        save_model(
+            self.model, self.optimizer, TRAINING_CONFIG.num_epochs - 1, self.best_val_loss, final_model_path
+        )
+        self.logger.info(f"保存最终模型: {final_model_path}")
+
         self.logger.info("训练完成!")
+
+    def load_model(self, model_path: str):
+        """加载模型"""
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"模型文件不存在: {model_path}")
+
+        # 如果模型还没有初始化，先初始化
+        if self.model is None:
+            self.setup_model()
+
+        # 加载模型状态
+        checkpoint = torch.load(model_path, map_location=self.device)
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        self.model.eval()
+
+        self.logger.info(f"成功加载模型: {model_path}")
+
+    def translate(self, text: str, max_length: int = 50) -> str:
+        """翻译单个句子"""
+        if self.model is None:
+            raise RuntimeError("模型未初始化，请先训练或加载模型")
+
+        self.model.eval()
+        tokenizer = self.data_manager.get_tokenizer()
+
+        with torch.no_grad():
+            # 编码输入
+            src_tokens = tokenizer.encode(text, 'en', MODEL_CONFIG.max_seq_len)
+            src = torch.tensor([src_tokens], device=self.device)
+
+            # 编码
+            encoder_output = self.model.encode(src)
+
+            # 解码 - 贪心搜索
+            tgt = torch.tensor([[tokenizer.bos_id]], device=self.device)
+
+            for _ in range(max_length):
+                output = self.model.decode_step(tgt, encoder_output)
+                next_token = output[:, -1, :].argmax(dim=-1, keepdim=True)
+                tgt = torch.cat([tgt, next_token], dim=1)
+
+                # 如果生成了EOS token，停止
+                if next_token.item() == tokenizer.eos_id:
+                    break
+
+            # 解码输出
+            tgt_tokens = tgt[0].cpu().tolist()
+            translation = tokenizer.decode(tgt_tokens, 'it')
+
+            return translation
 
     def get_tokenizer(self):
         """获取分词器"""

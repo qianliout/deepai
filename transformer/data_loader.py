@@ -8,7 +8,7 @@ from torch.utils.data import Dataset, DataLoader
 from datasets import load_dataset
 from typing import List, Tuple, Dict, Any
 import random
-from config import Config, DataConfig, TrainingConfig
+from config import MODEL_CONFIG, TRAINING_CONFIG, DATA_CONFIG
 from tokenizer import SimpleTokenizer
 from utils import setup_logging
 
@@ -69,20 +69,12 @@ class DataManager:
     数据管理器 - 负责数据下载、预处理和加载
     """
 
-    def __init__(self, config: Config):
+    def __init__(self):
         """
         初始化数据管理器
-
-        Args:
-            config: 配置对象
         """
-        self.config = config
-        self.data_config = config.data
-        self.training_config = config.training
-        self.model_config = config.model
-
-        self.tokenizer = SimpleTokenizer(self.model_config)
-        self.logger = setup_logging(self.training_config.log_dir)
+        self.tokenizer = SimpleTokenizer(MODEL_CONFIG)
+        self.logger = setup_logging(TRAINING_CONFIG.log_dir)
 
         # 数据存储
         self.train_data: List[Tuple[str, str]] = []
@@ -102,9 +94,9 @@ class DataManager:
         # 下载数据集
         try:
             dataset = load_dataset(
-                self.data_config.dataset_name,
-                self.data_config.language_pair,
-                cache_dir=self.training_config.cache_dir,
+                DATA_CONFIG.dataset_name,
+                DATA_CONFIG.language_pair,
+                cache_dir=TRAINING_CONFIG.cache_dir,
             )
         except Exception as e:
             self.logger.error(f"数据集下载失败: {e}")
@@ -126,8 +118,8 @@ class DataManager:
             if (
                 en_text
                 and it_text
-                and len(en_text.split()) <= self.model_config.max_seq_len - 2
-                and len(it_text.split()) <= self.model_config.max_seq_len - 2
+                and len(en_text.split()) <= MODEL_CONFIG.max_seq_len - 2
+                and len(it_text.split()) <= MODEL_CONFIG.max_seq_len - 2
             ):
                 all_pairs.append((en_text, it_text))
 
@@ -137,15 +129,15 @@ class DataManager:
         random.shuffle(all_pairs)
 
         # 分割训练和验证数据
-        total_needed = self.training_config.train_size + self.training_config.val_size
+        total_needed = TRAINING_CONFIG.train_size + TRAINING_CONFIG.val_size
         if len(all_pairs) < total_needed:
             self.logger.warning(f"可用数据({len(all_pairs)})少于需求({total_needed})")
             # 使用所有可用数据
             train_size = int(len(all_pairs) * 0.8)
             val_size = len(all_pairs) - train_size
         else:
-            train_size = self.training_config.train_size
-            val_size = self.training_config.val_size
+            train_size = TRAINING_CONFIG.train_size
+            val_size = TRAINING_CONFIG.val_size
 
         train_data = all_pairs[:train_size]
         val_data = all_pairs[train_size : train_size + val_size]
@@ -170,11 +162,11 @@ class DataManager:
 
         # 构建词典
         self.tokenizer.vocab_en = self.tokenizer.build_vocab(
-            en_texts, "en", self.data_config.min_freq, self.data_config.max_vocab_size
+            en_texts, "en", DATA_CONFIG.min_freq, DATA_CONFIG.max_vocab_size
         )
 
         self.tokenizer.vocab_it = self.tokenizer.build_vocab(
-            it_texts, "it", self.data_config.min_freq, self.data_config.max_vocab_size
+            it_texts, "it", DATA_CONFIG.min_freq, DATA_CONFIG.max_vocab_size
         )
 
         # 构建反向词典
@@ -182,7 +174,7 @@ class DataManager:
         self.tokenizer.id2word_it = {v: k for k, v in self.tokenizer.vocab_it.items()}
 
         # 保存词典
-        self.tokenizer.save_vocabs(self.training_config.vocab_save_dir)
+        self.tokenizer.save_vocabs(TRAINING_CONFIG.pretrain_vocab_dir)
 
         self.logger.info("词典构建完成")
 
@@ -194,7 +186,7 @@ class DataManager:
             (训练数据加载器, 验证数据加载器)
         """
         # 检查是否已有词典
-        vocab_path = self.training_config.vocab_save_dir
+        vocab_path = TRAINING_CONFIG.pretrain_vocab_dir
         en_vocab_file = os.path.join(vocab_path, "en_vocab.json")
         it_vocab_file = os.path.join(vocab_path, "it_vocab.json")
 
@@ -213,24 +205,24 @@ class DataManager:
             self.build_vocabularies(train_data)
 
         # 更新配置中的词汇表大小
-        self.config.model.vocab_size_en = len(self.tokenizer.vocab_en)
-        self.config.model.vocab_size_it = len(self.tokenizer.vocab_it)
+        MODEL_CONFIG.vocab_size_en = len(self.tokenizer.vocab_en)
+        MODEL_CONFIG.vocab_size_it = len(self.tokenizer.vocab_it)
 
-        self.logger.info(f"英语词汇表大小: {self.config.model.vocab_size_en}")
-        self.logger.info(f"意大利语词汇表大小: {self.config.model.vocab_size_it}")
+        self.logger.info(f"英语词汇表大小: {MODEL_CONFIG.vocab_size_en}")
+        self.logger.info(f"意大利语词汇表大小: {MODEL_CONFIG.vocab_size_it}")
 
         # 创建数据集
         train_dataset = TranslationDataset(
-            train_data, self.tokenizer, self.model_config.max_seq_len
+            train_data, self.tokenizer, MODEL_CONFIG.max_seq_len
         )
         val_dataset = TranslationDataset(
-            val_data, self.tokenizer, self.model_config.max_seq_len
+            val_data, self.tokenizer, MODEL_CONFIG.max_seq_len
         )
 
         # 创建数据加载器
         train_loader = DataLoader(
             train_dataset,
-            batch_size=self.training_config.batch_size,
+            batch_size=TRAINING_CONFIG.batch_size,
             shuffle=True,
             num_workers=0,  # Mac M1上设为0避免问题
             pin_memory=False,
@@ -238,7 +230,7 @@ class DataManager:
 
         val_loader = DataLoader(
             val_dataset,
-            batch_size=self.training_config.batch_size,
+            batch_size=TRAINING_CONFIG.batch_size,
             shuffle=False,
             num_workers=0,
             pin_memory=False,

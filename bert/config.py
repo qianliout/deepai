@@ -21,7 +21,6 @@ class BertConfig(BaseModel):
     hidden_act: str = Field(default="gelu", description="激活函数")
 
     # 位置和类型嵌入
-    # TODO max_position_embeddings 的作用是啥
     max_position_embeddings: int = Field(default=512, description="最大位置嵌入数")
     type_vocab_size: int = Field(default=2, description="token类型词汇表大小")
 
@@ -72,14 +71,31 @@ class TrainingConfig(BaseModel):
     save_steps: int = Field(default=1000, description="模型保存步数")
 
     # 目录配置 - 所有路径都在这里统一定义
-    model_save_dir: str = Field(default="/Users/liuqianli/work/python/deepai/saved_model/bert", description="预训练模型保存目录")
-    fine_tuning_save_dir: str = Field(default="/Users/liuqianli/work/python/deepai/saved_model/bert/fine_tuning", description="微调模型保存目录")
+    # 预训练相关目录
+    pretrain_checkpoints_dir: str = Field(
+        default="/Users/liuqianli/work/python/deepai/saved_model/bert/pretrain/checkpoints", description="预训练过程中的检查点保存目录"
+    )
+    pretrain_best_dir: str = Field(
+        default="/Users/liuqianli/work/python/deepai/saved_model/bert/pretrain/best", description="预训练最佳模型保存目录"
+    )
+    pretrain_final_dir: str = Field(
+        default="/Users/liuqianli/work/python/deepai/saved_model/bert/pretrain/final", description="预训练最终模型保存目录"
+    )
+
+    # 微调相关目录
+    finetuning_checkpoints_dir: str = Field(
+        default="/Users/liuqianli/work/python/deepai/saved_model/bert/finetuning/checkpoints", description="微调过程中的检查点保存目录"
+    )
+    finetuning_best_dir: str = Field(
+        default="/Users/liuqianli/work/python/deepai/saved_model/bert/finetuning/best", description="微调最佳模型保存目录"
+    )
+    finetuning_final_dir: str = Field(
+        default="/Users/liuqianli/work/python/deepai/saved_model/bert/finetuning/final", description="微调最终模型保存目录"
+    )
+
+    # 其他目录
     log_dir: str = Field(default="/Users/liuqianli/work/python/deepai/logs/bert", description="日志保存目录")
     cache_dir: str = Field(default="/Users/liuqianli/.cache/huggingface/datasets", description="HuggingFace数据集缓存目录")
-
-    # 预训练模型路径配置
-    pretrained_model_path: str = Field(default="/Users/liuqianli/work/python/deepai/saved_model/bert/best_model", description="预训练模型路径，用于微调时加载")
-
 
     class Config:
         """Pydantic配置"""
@@ -132,7 +148,6 @@ DATA_CONFIG = DataConfig()
 LOGGING_CONFIG = LoggingConfig()
 
 
-
 def get_device() -> torch.device:
     """
     自动检测并返回最佳设备
@@ -169,10 +184,7 @@ def setup_logging():
     logging.basicConfig(
         level=getattr(logging, LOGGING_CONFIG.log_level),
         format=LOGGING_CONFIG.log_format,
-        handlers=[
-            logging.StreamHandler(),  # 控制台输出
-            logging.FileHandler(log_filepath, encoding="utf-8")  # 文件输出
-        ]
+        handlers=[logging.StreamHandler(), logging.FileHandler(log_filepath, encoding="utf-8")],  # 控制台输出  # 文件输出
     )
 
     # 创建BERT专用logger
@@ -187,8 +199,15 @@ def create_directories():
     import os
 
     directories = [
-        TRAINING_CONFIG.model_save_dir,
-        TRAINING_CONFIG.fine_tuning_save_dir,
+        # 预训练相关目录
+        TRAINING_CONFIG.pretrain_checkpoints_dir,
+        TRAINING_CONFIG.pretrain_best_dir,
+        TRAINING_CONFIG.pretrain_final_dir,
+        # 微调相关目录
+        TRAINING_CONFIG.finetuning_checkpoints_dir,
+        TRAINING_CONFIG.finetuning_best_dir,
+        TRAINING_CONFIG.finetuning_final_dir,
+        # 其他目录
         TRAINING_CONFIG.log_dir,
         TRAINING_CONFIG.cache_dir,
     ]
@@ -225,12 +244,18 @@ def print_config():
     print(f"  MLM概率: {DATA_CONFIG.mlm_probability}")
 
     print("\n📁 目录配置:")
-    print(f"  预训练模型保存目录: {TRAINING_CONFIG.model_save_dir}")
-    print(f"  微调模型保存目录: {TRAINING_CONFIG.fine_tuning_save_dir}")
-    print(f"  预训练模型路径: {TRAINING_CONFIG.pretrained_model_path}")
-    print(f"  日志保存目录: {TRAINING_CONFIG.log_dir}")
-    print(f"  数据缓存目录: {TRAINING_CONFIG.cache_dir}")
-    print(f"  日志级别: {LOGGING_CONFIG.log_level}")
+    print("  预训练相关目录:")
+    print(f"    检查点目录: {TRAINING_CONFIG.pretrain_checkpoints_dir}")
+    print(f"    最佳模型目录: {TRAINING_CONFIG.pretrain_best_dir}")
+    print(f"    最终模型目录: {TRAINING_CONFIG.pretrain_final_dir}")
+    print("  微调相关目录:")
+    print(f"    检查点目录: {TRAINING_CONFIG.finetuning_checkpoints_dir}")
+    print(f"    最佳模型目录: {TRAINING_CONFIG.finetuning_best_dir}")
+    print(f"    最终模型目录: {TRAINING_CONFIG.finetuning_final_dir}")
+    print("  其他目录:")
+    print(f"    日志保存目录: {TRAINING_CONFIG.log_dir}")
+    print(f"    数据缓存目录: {TRAINING_CONFIG.cache_dir}")
+    print(f"    日志级别: {LOGGING_CONFIG.log_level}")
 
     print("=" * 50)
 

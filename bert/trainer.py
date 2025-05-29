@@ -46,8 +46,14 @@ class BertTrainer:
         logger.info(f"使用设备: {self.device}")
 
         # 创建模型保存目录
-        self.model_save_dir = Path(TRAINING_CONFIG.model_save_dir)
-        self.model_save_dir.mkdir(parents=True, exist_ok=True)
+        self.checkpoints_dir = Path(TRAINING_CONFIG.pretrain_checkpoints_dir)
+        self.best_model_dir = Path(TRAINING_CONFIG.pretrain_best_dir)
+        self.final_model_dir = Path(TRAINING_CONFIG.pretrain_final_dir)
+
+        # 创建所有必要的目录
+        self.checkpoints_dir.mkdir(parents=True, exist_ok=True)
+        self.best_model_dir.mkdir(parents=True, exist_ok=True)
+        self.final_model_dir.mkdir(parents=True, exist_ok=True)
 
         # 初始化模型
         self.model = self._create_model()
@@ -322,7 +328,7 @@ class BertTrainer:
 
     def _save_checkpoint(self):
         """保存训练检查点"""
-        checkpoint_dir = self.model_save_dir / f"checkpoint-{self.global_step}"
+        checkpoint_dir = self.checkpoints_dir / f"checkpoint-{self.global_step}"
         checkpoint_dir.mkdir(exist_ok=True)
 
         # 保存模型状态
@@ -402,34 +408,28 @@ class BertTrainer:
 
     def _save_best_model(self):
         """保存最佳模型"""
-        best_model_dir = self.model_save_dir / "best_model"
-        best_model_dir.mkdir(exist_ok=True)
+        torch.save(self.model.state_dict(), self.best_model_dir / "pytorch_model.bin")
 
-        torch.save(self.model.state_dict(), best_model_dir / "pytorch_model.bin")
-
-        with open(best_model_dir / "config.json", "w") as f:
+        with open(self.best_model_dir / "config.json", "w") as f:
             json.dump(BERT_CONFIG.model_dump(), f, indent=2)
 
-        logger.info(f"保存最佳模型，损失: {self.best_loss:.4f}")
+        logger.info(f"保存最佳模型到 {self.best_model_dir}，损失: {self.best_loss:.4f}")
 
     def _save_final_model(self):
         """保存最终模型"""
-        final_model_dir = self.model_save_dir / "final_model"
-        final_model_dir.mkdir(exist_ok=True)
+        torch.save(self.model.state_dict(), self.final_model_dir / "pytorch_model.bin")
 
-        torch.save(self.model.state_dict(), final_model_dir / "pytorch_model.bin")
-
-        with open(final_model_dir / "config.json", "w") as f:
+        with open(self.final_model_dir / "config.json", "w") as f:
             json.dump(BERT_CONFIG.model_dump(), f, indent=2)
 
-        logger.info("保存最终模型")
+        logger.info(f"保存最终模型到 {self.final_model_dir}")
 
     def _save_training_history(self):
         """保存训练历史"""
-        with open(self.model_save_dir / "training_history.json", "w") as f:
+        with open(self.checkpoints_dir / "training_history.json", "w") as f:
             json.dump(self.training_history, f, indent=2)
 
-        logger.info("保存训练历史")
+        logger.info(f"保存训练历史到 {self.checkpoints_dir}/training_history.json")
 
 
 def main():
@@ -439,7 +439,9 @@ def main():
 
     print("\n🎉 预训练完成！")
     print(f"最佳损失: {trainer.best_loss:.4f}")
-    print(f"模型保存目录: {trainer.model_save_dir}")
+    print(f"检查点目录: {trainer.checkpoints_dir}")
+    print(f"最佳模型目录: {trainer.best_model_dir}")
+    print(f"最终模型目录: {trainer.final_model_dir}")
 
 
 if __name__ == "__main__":

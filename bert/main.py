@@ -31,8 +31,9 @@ def run_pretraining():
 
     print("\n🎉 预训练完成！")
     print(f"最佳损失: {trainer.best_loss:.4f}")
-    print(f"输出目录: {trainer.output_dir}")
-    print(f"最佳模型: {trainer.output_dir}/best_model")
+    print(f"检查点目录: {trainer.checkpoints_dir}")
+    print(f"最佳模型目录: {trainer.best_model_dir}")
+    print(f"最终模型目录: {trainer.final_model_dir}")
 
     return history
 
@@ -44,7 +45,7 @@ def run_fine_tuning(pretrained_model_path: str = None):
 
     # 如果没有指定预训练模型路径，使用默认路径
     if pretrained_model_path is None:
-        pretrained_model_path = TRAINING_CONFIG.output_dir + "/" + "best_model"
+        pretrained_model_path = TRAINING_CONFIG.pretrain_best_dir
 
     pretrained_path = Path(pretrained_model_path)
     if not pretrained_path.exists():
@@ -60,8 +61,9 @@ def run_fine_tuning(pretrained_model_path: str = None):
 
     print("\n🎉 微调完成！")
     print(f"最佳准确率: {fine_tuner.best_accuracy:.4f}")
-    print(f"输出目录: {fine_tuner.output_dir}")
-    print(f"最佳模型: {fine_tuner.output_dir}/best_model")
+    print(f"检查点目录: {fine_tuner.checkpoints_dir}")
+    print(f"最佳模型目录: {fine_tuner.best_model_dir}")
+    print(f"最终模型目录: {fine_tuner.final_model_dir}")
 
     return history
 
@@ -74,9 +76,9 @@ def run_inference(model_path: str = None, model_type: str = "pretraining"):
     # 如果没有指定模型路径，使用配置中的默认路径
     if model_path is None:
         if model_type == "pretraining":
-            model_path = os.path.join(TRAINING_CONFIG.model_save_dir, "best_model")
+            model_path = TRAINING_CONFIG.pretrain_best_dir
         else:
-            model_path = os.path.join(TRAINING_CONFIG.fine_tuning_save_dir, "best_model")
+            model_path = TRAINING_CONFIG.finetuning_best_dir
 
     model_path_obj = Path(model_path)
     if not model_path_obj.exists():
@@ -190,8 +192,12 @@ def run_quick_test():
     TRAINING_CONFIG.max_samples = 100
     TRAINING_CONFIG.batch_size = 8
     # 更新快速测试的保存目录
-    TRAINING_CONFIG.model_save_dir = "/Users/liuqianli/work/python/deepai/saved_model/bert_quick_test"
-    TRAINING_CONFIG.fine_tuning_save_dir = "/Users/liuqianli/work/python/deepai/saved_model/bert_quick_test/fine_tuning"
+    TRAINING_CONFIG.pretrain_checkpoints_dir = "/Users/liuqianli/work/python/deepai/saved_model/bert_quick_test/pretrain/checkpoints"
+    TRAINING_CONFIG.pretrain_best_dir = "/Users/liuqianli/work/python/deepai/saved_model/bert_quick_test/pretrain/best"
+    TRAINING_CONFIG.pretrain_final_dir = "/Users/liuqianli/work/python/deepai/saved_model/bert_quick_test/pretrain/final"
+    TRAINING_CONFIG.finetuning_checkpoints_dir = "/Users/liuqianli/work/python/deepai/saved_model/bert_quick_test/finetuning/checkpoints"
+    TRAINING_CONFIG.finetuning_best_dir = "/Users/liuqianli/work/python/deepai/saved_model/bert_quick_test/finetuning/best"
+    TRAINING_CONFIG.finetuning_final_dir = "/Users/liuqianli/work/python/deepai/saved_model/bert_quick_test/finetuning/final"
     TRAINING_CONFIG.log_dir = "/Users/liuqianli/work/python/deepai/logs/bert_quick_test"
 
     print("使用小规模配置进行快速测试...")

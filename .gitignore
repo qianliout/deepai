@@ -22,9 +22,8 @@ __pycache__/
 # C extensions
 *.so
 
-data_cache
 logs
-saved_models
+saved_model
 
 
 # Distribution / packaging

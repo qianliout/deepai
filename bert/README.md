@@ -230,3 +230,17 @@ similarity = inference.compute_text_similarity("I love cats", "I adore felines")
 ---
 
 这个框架专为学习设计，代码结构清晰，注释详细。通过阅读和运行代码，你可以深入理解BERT的工作原理和实现细节。
+
+
+我准备这样安排transformer模型存放的目录
+预训练过程中的模型保存目录 saved_model/transformer/pretrain/checkpoint
+预训练最佳模型保存目录 saved_model/transformer/pretrain/best
+预训练完成后最终模型保存目录 saved_model/transformer/pretrain/final
+
+微调过程中的模型保存目录 saved_model/bert/finetuning/checkpoint
+微调过程中最佳模型保存目录 saved_model/bert/finetuning/best
+微调完成后最终模型保存目录 saved_model/bert/finetuning/final
+
+所有目录会在首次使用时自动创建，请按上述目录安排改正代码，要求这些目录在config.py中统一管理
+
+

@@ -41,7 +41,7 @@ class TrainingConfig(BaseModel):
 
     # 训练参数
     learning_rate: float = Field(default=1e-4, description="学习率")
-    num_epochs: int = Field(default=1, description="训练轮数")
+    num_epochs: int = Field(default=3, description="训练轮数")
     warmup_steps: int = Field(default=4000, description="学习率预热步数")
 
     # 设备配置
@@ -51,12 +51,17 @@ class TrainingConfig(BaseModel):
     )
 
     # 目录配置 - 所有路径都在这里统一定义
-    model_save_dir: str = Field(default="/Users/liuqianli/work/python/deepai/saved_model/transformer", description="模型保存目录")
-    vocab_save_dir: str = Field(default="/Users/liuqianli/work/python/deepai/saved_model/transformer/vocab", description="词典保存目录")
+    # 预训练相关目录
+    pretrain_checkpoints_dir: str = Field(default="/Users/liuqianli/work/python/deepai/saved_model/transformer/pretrain/checkpoints", description="预训练过程中的模型保存目录")
+    pretrain_best_dir: str = Field(default="/Users/liuqianli/work/python/deepai/saved_model/transformer/pretrain/best", description="预训练最佳模型保存目录")
+    pretrain_final_dir: str = Field(default="/Users/liuqianli/work/python/deepai/saved_model/transformer/pretrain/final", description="预训练完成后最终模型保存目录")
+    pretrain_vocab_dir: str = Field(default="/Users/liuqianli/work/python/deepai/saved_model/transformer/pretrain/vocab", description="字典存放目录")
+
+    # 其他目录
     log_dir: str = Field(default="/Users/liuqianli/work/python/deepai/logs/transformer", description="日志保存目录")
     cache_dir: str = Field(default="/Users/liuqianli/.cache/huggingface/datasets", description="HuggingFace数据集缓存目录")
 
-    # 日志
+    # 日志和保存
     log_interval: int = Field(default=100, description="日志打印间隔")
     save_interval: int = Field(default=1000, description="模型保存间隔")
 
@@ -68,34 +73,16 @@ class DataConfig(BaseModel):
         default="Helsinki-NLP/opus_books", description="数据集名称"
     )
     language_pair: str = Field(default="en-it", description="语言对")
-    # cache_dir 已移动到 TrainingConfig 中统一管理
 
     # 分词配置
     min_freq: int = Field(default=4, description="词汇最小频率")
     max_vocab_size: int = Field(default=10000, description="最大词汇表大小")
 
 
-class Config(BaseModel):
-    """总配置类"""
-
-    model: ModelConfig = Field(default_factory=ModelConfig)
-    training: TrainingConfig = Field(default_factory=TrainingConfig)
-    data: DataConfig = Field(default_factory=DataConfig)
-
-    def save_config(self, path: str):
-        """保存配置到文件"""
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(self.model_dump_json(indent=2))
-
-    @classmethod
-    def load_config(cls, path: str):
-        """从文件加载配置"""
-        with open(path, "r", encoding="utf-8") as f:
-            return cls.model_validate_json(f.read())
-
-
-# 默认配置实例
-default_config = Config()
+# 全局配置实例
+MODEL_CONFIG = ModelConfig()
+TRAINING_CONFIG = TrainingConfig()
+DATA_CONFIG = DataConfig()
 
 
 def create_directories():
@@ -103,10 +90,12 @@ def create_directories():
     import os
 
     directories = [
-        default_config.training.model_save_dir,
-        default_config.training.vocab_save_dir,
-        default_config.training.log_dir,
-        default_config.training.cache_dir,
+        TRAINING_CONFIG.pretrain_checkpoints_dir,
+        TRAINING_CONFIG.pretrain_best_dir,
+        TRAINING_CONFIG.pretrain_final_dir,
+        TRAINING_CONFIG.pretrain_vocab_dir,
+        TRAINING_CONFIG.log_dir,
+        TRAINING_CONFIG.cache_dir,
     ]
 
     for directory in directories:
@@ -116,4 +105,58 @@ def create_directories():
 
 def get_device():
     """获取设备"""
-    return default_config.training.device
+    if TRAINING_CONFIG.device == "auto":
+        if torch.cuda.is_available():
+            return torch.device("cuda")
+        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            return torch.device("mps")
+        else:
+            return torch.device("cpu")
+    else:
+        return torch.device(TRAINING_CONFIG.device)
+
+
+def print_config():
+    """打印配置信息"""
+    print("=" * 60)
+    print("Transformer配置信息")
+    print("=" * 60)
+
+    print("\n🏗️ 模型配置:")
+    print(f"  模型维度: {MODEL_CONFIG.d_model}")
+    print(f"  注意力头数: {MODEL_CONFIG.n_heads}")
+    print(f"  编码器/解码器层数: {MODEL_CONFIG.n_layers}")
+    print(f"  前馈网络维度: {MODEL_CONFIG.d_ff}")
+    print(f"  最大序列长度: {MODEL_CONFIG.max_seq_len}")
+    print(f"  Dropout: {MODEL_CONFIG.dropout}")
+
+    print("\n🚀 训练配置:")
+    print(f"  训练数据大小: {TRAINING_CONFIG.train_size}")
+    print(f"  验证数据大小: {TRAINING_CONFIG.val_size}")
+    print(f"  批次大小: {TRAINING_CONFIG.batch_size}")
+    print(f"  学习率: {TRAINING_CONFIG.learning_rate}")
+    print(f"  训练轮数: {TRAINING_CONFIG.num_epochs}")
+    print(f"  设备: {get_device()}")
+
+    print("\n📊 数据配置:")
+    print(f"  数据集: {DATA_CONFIG.dataset_name}")
+    print(f"  语言对: {DATA_CONFIG.language_pair}")
+    print(f"  最小词频: {DATA_CONFIG.min_freq}")
+    print(f"  最大词汇表大小: {DATA_CONFIG.max_vocab_size}")
+
+    print("\n📁 目录配置:")
+    print(f"  预训练检查点目录: {TRAINING_CONFIG.pretrain_checkpoints_dir}")
+    print(f"  预训练最佳模型目录: {TRAINING_CONFIG.pretrain_best_dir}")
+    print(f"  预训练最终模型目录: {TRAINING_CONFIG.pretrain_final_dir}")
+    print(f"  词典保存目录: {TRAINING_CONFIG.pretrain_vocab_dir}")
+    print(f"  日志保存目录: {TRAINING_CONFIG.log_dir}")
+    print(f"  数据缓存目录: {TRAINING_CONFIG.cache_dir}")
+
+    print("=" * 60)
+
+
+if __name__ == "__main__":
+    # 测试配置
+    print_config()
+    print("\n测试目录创建:")
+    create_directories()
