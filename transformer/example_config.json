@@ -1,0 +1,37 @@
+{
+  "model": {
+    "d_model": 256,
+    "d_ff": 1024,
+    "n_heads": 8,
+    "n_layers": 4,
+    "vocab_size_en": 8000,
+    "vocab_size_it": 8000,
+    "max_seq_len": 64,
+    "dropout": 0.1,
+    "pad_token": "<PAD>",
+    "unk_token": "<UNK>",
+    "bos_token": "<BOS>",
+    "eos_token": "<EOS>"
+  },
+  "training": {
+    "train_size": 5000,
+    "val_size": 1000,
+    "batch_size": 16,
+    "learning_rate": 0.0001,
+    "num_epochs": 5,
+    "warmup_steps": 2000,
+    "device": "mps",
+    "model_save_path": "./saved_models",
+    "vocab_save_path": "./vocab",
+    "log_dir": "./logs",
+    "log_interval": 50,
+    "save_interval": 500
+  },
+  "data": {
+    "dataset_name": "Helsinki-NLP/opus_books",
+    "language_pair": "en-it",
+    "cache_dir": "~/.cache/huggingface/datasets/",
+    "min_freq": 4,
+    "max_vocab_size": 8000
+  }
+}
