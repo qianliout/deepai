@@ -397,7 +397,7 @@ def create_classification_dataloader(texts: List[str], labels: List[int], tokeni
         数据加载器
     """
     dataset = BertClassificationDataset(texts, labels, tokenizer)
-
-    dataloader = DataLoader(dataset, batch_size=TRAINING_CONFIG.batch_size, shuffle=shuffle, pin_memory=True)
+    # mps 不支持 pin_memory
+    dataloader = DataLoader(dataset, batch_size=TRAINING_CONFIG.batch_size, shuffle=shuffle, pin_memory=False)
 
     return dataloader

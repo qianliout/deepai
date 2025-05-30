@@ -70,7 +70,7 @@ class BertInference:
             logger.info(f"加载模型配置: {config_file}")
         else:
             logger.warning(f"配置文件不存在: {config_file}，使用默认配置")
-            config = BERT_CONFIG.dict()
+            config = BERT_CONFIG.model_dump()
 
         return config
 
@@ -126,8 +126,7 @@ class BertInference:
             预测结果列表
 
         数据流转：
-        text -> tokenization -> (batch_size=1, seq_len)
-        -> model -> prediction_logits: (1, seq_len, vocab_size)
+        text -> tokenization -> (batch_size=1, seq_len) -> model -> prediction_logits: (1, seq_len, vocab_size)
         -> 找到[MASK]位置 -> softmax -> top_k预测
         """
         if self.model_type != "pretraining":
@@ -158,8 +157,27 @@ class BertInference:
             prediction_logits = outputs["prediction_logits"]  # (1, seq_len, vocab_size)
 
         # 找到[MASK]位置
-        input_ids = inputs["input_ids"].squeeze(0)  # (seq_len,)
-        mask_positions = (input_ids == self.tokenizer.mask_token_id).nonzero(as_tuple=True)[0]
+        input_ids = inputs["input_ids"].squeeze(
+            0
+        )  # (seq_len,) - 移除batch维度，得到序列长度维的张量
+
+        # 计算[MASK]标记的位置：
+        # 1. (input_ids == self.tokenizer.mask_token_id)
+        #    - 比较input_ids中的每个token_id是否等于mask_token_id
+        #    - 返回一个布尔张量，大小为(seq_len,)，值为True的位置即为[MASK]标记位置
+        #
+        # 2. .nonzero(as_tuple=True)
+        #    - nonzero()找出张量中非零(True)元素的索引
+        #    - as_tuple=True让返回值是一个元组，每个维度的索引分别存储
+        #    - 对于1维张量，返回一个只包含一个张量的元组
+        #
+        # 3. [0]
+        #    - 取元组中的第一个元素，即得到包含所有[MASK]位置索引的张量
+        #
+        # 最终mask_positions的形状为(num_masks,)，其中num_masks是文本中[MASK]标记的数量
+        mask_positions = (input_ids == self.tokenizer.mask_token_id).nonzero(
+            as_tuple=True
+        )[0]
 
         results = []
         for mask_pos in mask_positions:
@@ -170,13 +188,28 @@ class BertInference:
             probs = F.softmax(mask_logits, dim=-1)  # (vocab_size,)
 
             # 获取top_k预测
+            # torch.topk返回两个张量：
+            # 1. top_probs: 形状为(top_k,)
+            #    - 包含概率分布中最大的k个概率值
+            #    - 这些值是经过softmax后的概率，范围在[0,1]之间
+            #    - 按降序排列，即第一个值是最大概率
+            # 2. top_indices: 形状为(top_k,)
+            #    - 包含这k个最大概率值对应的词表索引
+            #    - 这些索引可以用来从词表中查找对应的实际单词
+            #    - 与top_probs一一对应，例如top_indices[0]是概率为top_probs[0]的词的索引
+            #
+            # 例如，如果top_k=3，可能的结果：
+            # top_probs:   [0.82, 0.12, 0.06] - 三个最高概率
+            # top_indices: [2045,  182,  359] - 对应的词表索引
             top_probs, top_indices = torch.topk(probs, top_k)
 
             # 转换为词汇
             predictions = []
             for prob, idx in zip(top_probs, top_indices):
                 token = self.tokenizer.decode([idx.item()])
-                predictions.append({"token": token, "probability": prob.item(), "token_id": idx.item()})
+                predictions.append(
+                    {"token": token, "probability": prob.item(), "token_id": idx.item()}
+                )
 
             results.append({"position": mask_pos.item(), "predictions": predictions})
 

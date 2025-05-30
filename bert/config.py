@@ -26,7 +26,9 @@ class BertConfig(BaseModel):
 
     # 正则化参数
     hidden_dropout_prob: float = Field(default=0.1, description="隐藏层dropout概率")
-    attention_probs_dropout_prob: float = Field(default=0.1, description="注意力dropout概率")
+    attention_probs_dropout_prob: float = Field(
+        default=0.1, description="注意力dropout概率"
+    )
     layer_norm_eps: float = Field(default=1e-12, description="LayerNorm的epsilon")
 
     # 初始化参数
@@ -60,7 +62,9 @@ class TrainingConfig(BaseModel):
     # 数据集参数
     dataset_name: str = Field(default="Salesforce/wikitext", description="数据集名称")
     dataset_config: str = Field(default="wikitext-2-raw-v1", description="数据集配置")
-    max_samples: Optional[int] = Field(default=1000, description="最大样本数（用于快速测试）")
+    max_samples: Optional[int] = Field(
+        default=1000, description="最大样本数（用于快速测试）"
+    )
 
     # 设备和并行
     device: str = Field(default="auto", description="训练设备")
@@ -73,29 +77,41 @@ class TrainingConfig(BaseModel):
     # 目录配置 - 所有路径都在这里统一定义
     # 预训练相关目录
     pretrain_checkpoints_dir: str = Field(
-        default="/Users/liuqianli/work/python/deepai/saved_model/bert/pretrain/checkpoints", description="预训练过程中的检查点保存目录"
+        default="/Users/liuqianli/work/python/deepai/saved_model/bert/pretrain/checkpoints",
+        description="预训练过程中的检查点保存目录",
     )
     pretrain_best_dir: str = Field(
-        default="/Users/liuqianli/work/python/deepai/saved_model/bert/pretrain/best", description="预训练最佳模型保存目录"
+        default="/Users/liuqianli/work/python/deepai/saved_model/bert/pretrain/best",
+        description="预训练最佳模型保存目录",
     )
     pretrain_final_dir: str = Field(
-        default="/Users/liuqianli/work/python/deepai/saved_model/bert/pretrain/final", description="预训练最终模型保存目录"
+        default="/Users/liuqianli/work/python/deepai/saved_model/bert/pretrain/final",
+        description="预训练最终模型保存目录",
     )
 
     # 微调相关目录
     finetuning_checkpoints_dir: str = Field(
-        default="/Users/liuqianli/work/python/deepai/saved_model/bert/finetuning/checkpoints", description="微调过程中的检查点保存目录"
+        default="/Users/liuqianli/work/python/deepai/saved_model/bert/finetuning/checkpoints",
+        description="微调过程中的检查点保存目录",
     )
     finetuning_best_dir: str = Field(
-        default="/Users/liuqianli/work/python/deepai/saved_model/bert/finetuning/best", description="微调最佳模型保存目录"
+        default="/Users/liuqianli/work/python/deepai/saved_model/bert/finetuning/best",
+        description="微调最佳模型保存目录",
     )
     finetuning_final_dir: str = Field(
-        default="/Users/liuqianli/work/python/deepai/saved_model/bert/finetuning/final", description="微调最终模型保存目录"
+        default="/Users/liuqianli/work/python/deepai/saved_model/bert/finetuning/final",
+        description="微调最终模型保存目录",
     )
 
     # 其他目录
-    log_dir: str = Field(default="/Users/liuqianli/work/python/deepai/logs/bert", description="日志保存目录")
-    cache_dir: str = Field(default="/Users/liuqianli/.cache/huggingface/datasets", description="HuggingFace数据集缓存目录")
+    log_dir: str = Field(
+        default="/Users/liuqianli/work/python/deepai/logs/bert",
+        description="日志保存目录",
+    )
+    cache_dir: str = Field(
+        default="/Users/liuqianli/.cache/huggingface/datasets",
+        description="HuggingFace数据集缓存目录",
+    )
 
     class Config:
         """Pydantic配置"""
@@ -107,7 +123,9 @@ class DataConfig(BaseModel):
     """数据配置"""
 
     # Tokenizer配置
-    tokenizer_name: str = Field(default="bert-base-uncased", description="tokenizer名称")
+    tokenizer_name: str = Field(
+        default="bert-base-uncased", description="tokenizer名称"
+    )
     do_lower_case: bool = Field(default=True, description="是否转换为小写")
 
     # 序列长度
@@ -133,7 +151,9 @@ class LoggingConfig(BaseModel):
         default="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         description="日志格式",
     )
-    log_file: Optional[str] = Field(default=None, description="日志文件路径，将使用TRAINING_CONFIG.log_dir")
+    log_file: Optional[str] = Field(
+        default=None, description="日志文件路径，将使用TRAINING_CONFIG.log_dir"
+    )
 
     class Config:
         """Pydantic配置"""
@@ -184,7 +204,10 @@ def setup_logging():
     logging.basicConfig(
         level=getattr(logging, LOGGING_CONFIG.log_level),
         format=LOGGING_CONFIG.log_format,
-        handlers=[logging.StreamHandler(), logging.FileHandler(log_filepath, encoding="utf-8")],  # 控制台输出  # 文件输出
+        handlers=[
+            logging.StreamHandler(),
+            logging.FileHandler(log_filepath, encoding="utf-8"),
+        ],  # 控制台输出  # 文件输出
     )
 
     # 创建BERT专用logger
@@ -213,6 +236,7 @@ def create_directories():
     ]
 
     for directory in directories:
+        # s.makedirs() 方法可以递归地创建目录，如果父目录不存在也会一并创建。
         os.makedirs(directory, exist_ok=True)
         print(f"✅ 创建目录: {directory}")
 

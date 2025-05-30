@@ -321,6 +321,7 @@ class BertFineTuner:
 
                 # 收集结果
                 eval_loss += loss.item()
+                # TODO 这里 extend 是什么意思，什么作用
                 predictions.extend(preds.cpu().numpy())
                 true_labels.extend(batch["labels"].cpu().numpy())
                 num_batches += 1
