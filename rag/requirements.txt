@@ -1,0 +1,14 @@
+langchain>=0.1.0
+torch
+transformers
+chromadb
+pydantic>=2.0
+python-dotenv
+loguru
+dashscope  # 通义千问API
+sentence-transformers
+pandas
+numpy
+faiss-cpu  # 向量检索库
+pypdf      # PDF文档处理
+python-docx # Word文档处理
