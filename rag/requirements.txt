@@ -1,14 +1,38 @@
-langchain>=0.1.0
-torch
-transformers
-chromadb
-pydantic>=2.0
-python-dotenv
-loguru
-dashscope  # 通义千问API
-sentence-transformers
-pandas
-numpy
-faiss-cpu  # 向量检索库
-pypdf      # PDF文档处理
-python-docx # Word文档处理
+# RAG个人知识库 - 简化版依赖
+
+# 核心框架
+langchain>=0.2.0
+langchain-community>=0.2.0
+langchain-core>=0.2.0
+langchain-text-splitters>=0.2.0
+
+# 深度学习框架
+torch>=2.0.0
+transformers>=4.30.0
+sentence-transformers>=2.2.0
+
+# 向量数据库 (只使用ChromaDB)
+chromadb>=0.4.0
+
+# 数据处理
+pydantic>=2.0.0
+numpy>=1.24.0
+
+# 通义百炼API
+dashscope>=1.14.0
+
+# Redis会话存储
+redis>=4.5.0
+
+# 工具库
+loguru>=0.7.0
+rich>=13.0.0
+click>=8.1.0
+
+# 开发工具
+pytest>=7.4.0
+
+# 可选依赖（根据需要安装）
+jieba>=0.42.1     # 中文分词
+rank-bm25>=0.2.2  # BM25检索
+nltk>=3.8.1       # 英文文本处理
