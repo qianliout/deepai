@@ -17,7 +17,7 @@ import json
 from langchain_core.documents import Document
 from langchain_core.runnables import Runnable
 
-from config import config
+
 from logger import get_logger, log_execution_time, LogExecutionTime
 from retriever import RetrieverManager, RetrievalResult
 from llm import LLMManager

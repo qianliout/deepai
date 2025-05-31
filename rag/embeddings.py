@@ -18,7 +18,7 @@ from langchain_core.embeddings import Embeddings
 from pathlib import Path
 import time
 
-from config import config
+from config import EMBEDDING_CONFIG, get_device
 from logger import get_logger, log_execution_time, LogExecutionTime
 
 
@@ -42,8 +42,8 @@ class EmbeddingManager(Embeddings):
             model_name: 嵌入模型名称，默认使用配置中的模型
         """
         self.logger = get_logger("EmbeddingManager")
-        self.model_name = model_name or config.embedding.model_name
-        self.device = config.get_device()
+        self.model_name = model_name or EMBEDDING_CONFIG.model_name
+        self.device = get_device()
         self.model = None
         self.embedding_dim = None
 
@@ -59,7 +59,7 @@ class EmbeddingManager(Embeddings):
                 self.logger.info(f"正在加载嵌入模型: {self.model_name}")
 
                 # 设置模型缓存目录
-                cache_dir = Path(config.embedding.cache_dir)
+                cache_dir = Path(EMBEDDING_CONFIG.cache_dir)
                 cache_dir.mkdir(parents=True, exist_ok=True)
 
                 # 加载模型
@@ -93,9 +93,9 @@ class EmbeddingManager(Embeddings):
             # 批量编码
             embeddings = self.model.encode(
                 texts,
-                batch_size=config.embedding.batch_size,
+                batch_size=EMBEDDING_CONFIG.batch_size,
                 show_progress_bar=len(texts) > 10,
-                normalize_embeddings=config.embedding.normalize_embeddings,
+                normalize_embeddings=True,
                 convert_to_numpy=True,
             )
 
@@ -126,7 +126,7 @@ class EmbeddingManager(Embeddings):
 
             # 单个文本编码
             embedding = self.model.encode(
-                [text], batch_size=1, normalize_embeddings=config.embedding.normalize_embeddings, convert_to_numpy=True
+                [text], batch_size=1, normalize_embeddings=True, convert_to_numpy=True
             )
 
             # embedding shape: [1, embedding_dim] -> [embedding_dim]
@@ -150,14 +150,14 @@ class EmbeddingManager(Embeddings):
         Returns:
             嵌入向量数组，shape: [num_texts, embedding_dim]
         """
-        batch_size = batch_size or config.embedding.batch_size
+        batch_size = batch_size or EMBEDDING_CONFIG.batch_size
 
         try:
             embeddings = self.model.encode(
                 texts,
                 batch_size=batch_size,
                 show_progress_bar=len(texts) > 10,
-                normalize_embeddings=config.embedding.normalize_embeddings,
+                normalize_embeddings=True,
                 convert_to_numpy=True,
             )
 
@@ -208,8 +208,8 @@ class EmbeddingManager(Embeddings):
             "model_name": self.model_name,
             "device": self.device,
             "embedding_dim": self.embedding_dim,
-            "max_length": config.embedding.max_length,
-            "normalize_embeddings": config.embedding.normalize_embeddings,
+            "max_length": EMBEDDING_CONFIG.max_length,
+            "batch_size": EMBEDDING_CONFIG.batch_size,
         }
 
     def __repr__(self) -> str:

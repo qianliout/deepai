@@ -18,7 +18,6 @@ from dataclasses import dataclass
 import time
 import re
 
-from config import config
 from logger import get_logger
 
 

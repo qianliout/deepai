@@ -26,7 +26,7 @@ except ImportError:
 
 from langchain_core.documents import Document
 
-from config import config
+from config import VECTORSTORE_CONFIG
 from logger import get_logger, log_execution_time
 
 
@@ -63,7 +63,7 @@ class VectorStoreManager:
             self.logger.info("正在初始化ChromaDB存储")
 
             # 创建持久化目录
-            persist_dir = Path(config.chromadb.persist_directory)
+            persist_dir = Path(VECTORSTORE_CONFIG.persist_directory)
             persist_dir.mkdir(parents=True, exist_ok=True)
 
             # 初始化ChromaDB客户端
@@ -71,10 +71,10 @@ class VectorStoreManager:
 
             # 获取或创建集合
             self.collection = self.client.get_or_create_collection(
-                name=config.chromadb.collection_name, metadata={"hnsw:space": "cosine"}  # 使用余弦相似度
+                name=VECTORSTORE_CONFIG.collection_name, metadata={"hnsw:space": "cosine"}  # 使用余弦相似度
             )
 
-            self.logger.info(f"ChromaDB初始化成功 | 集合: {config.chromadb.collection_name} | " f"文档数量: {self.collection.count()}")
+            self.logger.info(f"ChromaDB初始化成功 | 集合: {VECTORSTORE_CONFIG.collection_name} | " f"文档数量: {self.collection.count()}")
 
         except Exception as e:
             self.logger.error(f"ChromaDB初始化失败: {e}")

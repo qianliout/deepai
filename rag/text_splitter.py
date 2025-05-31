@@ -16,9 +16,8 @@ from dataclasses import dataclass
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter, CharacterTextSplitter, TokenTextSplitter
 
-from config import config
 from logger import get_logger, log_execution_time
-from chinese_tokenizer import create_tokenizer
+from rag.tokenizer import create_tokenizer
 
 
 @dataclass

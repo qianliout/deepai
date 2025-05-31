@@ -18,7 +18,6 @@ from dataclasses import dataclass
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
 
-from config import config
 from logger import get_logger, log_execution_time, LogExecutionTime
 from query_expander import QueryExpander
 
@@ -59,8 +58,8 @@ class RetrieverManager(BaseRetriever):
         self.retrieval_config = config.retriever
 
         # 初始化查询扩展器
-        self.query_expander = QueryExpander(
-            enable_expansion=config.query_expansion.enable_synonyms
+        self.query_expander = SimpleQueryExpander(
+            enable_synonyms=config.query_expansion.enable_synonyms
         ) if config.retriever.enable_query_expansion else None
 
         # 初始化检索策略

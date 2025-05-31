@@ -26,7 +26,6 @@ try:
 except ImportError:
     JIEBA_AVAILABLE = False
 
-from config import config
 from logger import get_logger
 
 

@@ -16,7 +16,6 @@ import hashlib
 
 from langchain_core.documents import Document
 
-from config import config
 from logger import get_logger, log_execution_time
 
 
