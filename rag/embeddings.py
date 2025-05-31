@@ -54,7 +54,7 @@ class EmbeddingManager(Embeddings):
 
         数据流：模型下载/加载 -> 设备配置 -> 维度获取
         """
-        with LogExecutionTime("load_embedding_model", model_name=self.model_name):
+        with LogExecutionTime("load_embedding_model"):
             try:
                 self.logger.info(f"正在加载嵌入模型: {self.model_name}")
 

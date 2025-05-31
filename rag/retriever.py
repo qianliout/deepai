@@ -20,6 +20,7 @@ from langchain_core.retrievers import BaseRetriever
 
 from logger import get_logger, log_execution_time, LogExecutionTime
 from query_expander import QueryExpander
+from config import VECTORSTORE_CONFIG
 
 
 @dataclass

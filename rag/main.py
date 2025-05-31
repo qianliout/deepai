@@ -32,7 +32,7 @@ def run_build():
         # 1. 加载文档
         print("\n1. 加载文档...")
         loader = DocumentLoader()
-        documents = loader.load_documents_from_directory("data/documents")
+        documents = loader.load_directory("data/documents")
         print(f"加载了 {len(documents)} 个文档")
         
         if not documents:
@@ -70,7 +70,7 @@ def run_chat():
     print("=" * 50)
     
     try:
-        from rag_chain import RAGChain
+        from simple_rag_chain import RAGChain
         
         # 初始化RAG链
         print("正在初始化RAG系统...")
@@ -119,7 +119,7 @@ def run_query(query: str):
     print("=" * 50)
     
     try:
-        from rag_chain import RAGChain
+        from simple_rag_chain import RAGChain
         
         rag_chain = RAGChain()
         response = rag_chain.query(query)
@@ -165,8 +165,8 @@ def run_status():
         vector_store = VectorStoreManager(embedding_manager)
         
         # 获取文档数量
-        collection = vector_store.get_collection()
-        doc_count = collection.count() if collection else 0
+        stats = vector_store.get_stats()
+        doc_count = stats.get("document_count", 0)
         
         print(f"\n📚 知识库状态:")
         print(f"  文档数量: {doc_count}")

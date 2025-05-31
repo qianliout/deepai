@@ -89,7 +89,7 @@ class PathConfig(BaseModel):
     data_dir: str = Field(default="data", description="数据根目录")
     documents_dir: str = Field(default="data/documents", description="文档目录")
     vectorstore_dir: str = Field(default="data/vectorstore", description="向量存储目录")
-    log_dir: str = Field(default="logs", description="日志目录")
+    log_dir: str = Field(default="/Users/liuqianli/work/python/deepai/logs/rag", description="日志目录")
     
     class Config:
         extra = "forbid"

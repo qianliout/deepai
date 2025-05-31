@@ -17,7 +17,8 @@ from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter, CharacterTextSplitter, TokenTextSplitter
 
 from logger import get_logger, log_execution_time
-from rag.tokenizer import create_tokenizer
+from tokenizer import create_tokenizer
+from config import TEXT_SPLITTER_CONFIG, TOKENIZER_CONFIG
 
 
 @dataclass
@@ -48,7 +49,7 @@ class TextSplitterManager:
         self.logger = get_logger("TextSplitterManager")
 
         # 初始化中文分词器
-        tokenizer_type = config.chinese_tokenizer.tokenizer_type
+        tokenizer_type = TOKENIZER_CONFIG.tokenizer_type
         self.chinese_tokenizer = create_tokenizer(tokenizer_type)
 
         # 中文分割符优先级
@@ -137,10 +138,9 @@ class TextSplitterManager:
         """
         # 合并配置参数
         params = {
-            "chunk_size": kwargs.get("chunk_size", config.text_splitter.chunk_size),
-            "chunk_overlap": kwargs.get("chunk_overlap", config.text_splitter.chunk_overlap),
+            "chunk_size": kwargs.get("chunk_size", TEXT_SPLITTER_CONFIG.chunk_size),
+            "chunk_overlap": kwargs.get("chunk_overlap", TEXT_SPLITTER_CONFIG.chunk_overlap),
             "length_function": len,
-            "keep_separator": config.text_splitter.keep_separator,
         }
 
         if strategy == "recursive":

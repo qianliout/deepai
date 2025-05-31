@@ -100,8 +100,8 @@ class LLMManager:
             response = self._call_api(messages, **kwargs)
 
             # 提取生成的文本
-            if response and response.output and response.output.choices:
-                generated_text = response.output.choices[0].message.content
+            if response and response.output:
+                generated_text = response.output.text
                 self.logger.debug(f"文本生成成功，长度: {len(generated_text)}")
                 return generated_text
             else:
@@ -182,8 +182,8 @@ class LLMManager:
             response = self._call_api(messages)
 
             # 提取回复
-            if response and response.output and response.output.choices:
-                assistant_reply = response.output.choices[0].message.content
+            if response and response.output:
+                assistant_reply = response.output.text
 
                 # 更新对话历史
                 self.chat_history.append(ChatMessage("user", message, time.time()))
@@ -227,12 +227,11 @@ class LLMManager:
             full_response = ""
 
             for response in Generation.call(**params):
-                if response.status_code == 200:
-                    if response.output and response.output.choices:
-                        chunk = response.output.choices[0].message.content
-                        if chunk:
-                            full_response += chunk
-                            yield chunk
+                if response.status_code == 200 and response.output:
+                    chunk = response.output.text
+                    if chunk:
+                        full_response += chunk
+                        yield chunk
                 else:
                     raise Exception(f"流式API调用失败: {response.message}")
 

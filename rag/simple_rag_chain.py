@@ -1,16 +1,16 @@
 """
-RAG链模块
-简化版RAG处理链，专注于基本的RAG功能，合并了simple_rag_chain.py的功能
+简化RAG链模块
+专注于基本的RAG功能，移除复杂的依赖
 """
 
-import time
-from typing import List, Dict, Any, Optional, Generator
+from typing import List, Generator, Optional
 from dataclasses import dataclass
 
-from logger import get_logger, log_execution_time
-from config import LLM_CONFIG, VECTORSTORE_CONFIG
+from logger import get_logger
+from config import LLM_CONFIG
 from embeddings import EmbeddingManager
 from vector_store import VectorStoreManager
+from simple_retriever import RetrieverManager
 from llm import LLMManager
 
 
@@ -24,15 +24,15 @@ class RAGResponse:
     generation_time: float
 
 
-class RAGChain:
+class SimpleRAGChain:
     """简化RAG链
     
-    提供基本的RAG问答功能，整合了检索和生成
+    提供基本的RAG问答功能
     """
     
     def __init__(self):
         """初始化RAG链"""
-        self.logger = get_logger("RAGChain")
+        self.logger = get_logger("SimpleRAGChain")
         
         try:
             # 初始化组件
@@ -44,8 +44,7 @@ class RAGChain:
             # 向量存储
             self.vector_store = VectorStoreManager(self.embedding_manager)
             
-            # 检索器 - 延迟导入避免循环依赖
-            from simple_retriever import RetrieverManager
+            # 检索器
             self.retriever = RetrieverManager(self.vector_store, self.embedding_manager)
             
             # LLM
@@ -60,7 +59,6 @@ class RAGChain:
             self.logger.error(f"RAG链初始化失败: {e}")
             raise
     
-    @log_execution_time("rag_query")
     def query(self, question: str, top_k: int = 5) -> str:
         """单次查询
         
@@ -75,6 +73,7 @@ class RAGChain:
             self.logger.info(f"处理查询: {question[:50]}...")
             
             # 1. 检索相关文档
+            import time
             start_time = time.time()
             
             retrieval_results = self.retriever.retrieve(question, top_k=top_k)
@@ -195,3 +194,7 @@ class RAGChain:
         except Exception as e:
             self.logger.error(f"获取统计信息失败: {e}")
             return {"error": str(e)}
+
+
+# 为了兼容性，保留原来的类名
+RAGChain = SimpleRAGChain

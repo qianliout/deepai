@@ -131,8 +131,8 @@ class VectorStoreManager:
         Returns:
             (文档, 相似度分数) 元组列表，按相似度降序排列
         """
-        k = k or config.chromadb.top_k
-        score_threshold = score_threshold or config.chromadb.score_threshold
+        k = k or VECTORSTORE_CONFIG.top_k
+        score_threshold = score_threshold or VECTORSTORE_CONFIG.score_threshold
 
         try:
             self.logger.debug(f"开始相似度搜索: {query[:50]}...")
@@ -171,8 +171,8 @@ class VectorStoreManager:
                 "store_type": "chromadb",
                 "document_count": count,
                 "embedding_dim": self.embedding_manager.embedding_dim,
-                "collection_name": config.chromadb.collection_name,
-                "persist_directory": config.chromadb.persist_directory,
+                "collection_name": VECTORSTORE_CONFIG.collection_name,
+                "persist_directory": VECTORSTORE_CONFIG.persist_directory,
             }
         except Exception as e:
             self.logger.error(f"获取统计信息失败: {e}")
@@ -180,7 +180,7 @@ class VectorStoreManager:
                 "store_type": "chromadb",
                 "document_count": 0,
                 "embedding_dim": 0,
-                "collection_name": config.chromadb.collection_name,
+                "collection_name": VECTORSTORE_CONFIG.collection_name,
                 "error": str(e),
             }
 
@@ -190,10 +190,10 @@ class VectorStoreManager:
             self.logger.info("正在清空ChromaDB向量存储")
 
             # 删除现有集合
-            self.client.delete_collection(config.chromadb.collection_name)
+            self.client.delete_collection(VECTORSTORE_CONFIG.collection_name)
 
             # 重新创建集合
-            self.collection = self.client.get_or_create_collection(name=config.chromadb.collection_name, metadata={"hnsw:space": "cosine"})
+            self.collection = self.client.get_or_create_collection(name=VECTORSTORE_CONFIG.collection_name, metadata={"hnsw:space": "cosine"})
 
             self.logger.info("ChromaDB向量存储已清空")
 
