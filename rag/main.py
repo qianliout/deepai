@@ -33,6 +33,7 @@ from embeddings import EmbeddingManager
 from vector_store import VectorStoreManager
 from llm import LLMManager
 from document_loader import DocumentLoader
+from system_checker import SystemChecker
 
 # 初始化控制台和日志
 console = Console()
@@ -238,6 +239,31 @@ def cli(debug):
     if debug:
         config.debug = True
         config.logging.level = "DEBUG"
+
+
+@cli.command()
+def check():
+    """检查系统环境和配置"""
+    try:
+        console.print("🔍 开始系统检查...", style="blue")
+
+        checker = SystemChecker()
+        report = checker.run_all_checks()
+
+        # 根据检查结果返回适当的退出码
+        if report.overall_status == "error":
+            console.print("\n❌ 系统检查发现严重问题，请修复后重试", style="red")
+            sys.exit(1)
+        elif report.overall_status == "warning":
+            console.print("\n⚠️ 系统检查发现一些警告，建议修复", style="yellow")
+            sys.exit(0)
+        else:
+            console.print("\n✅ 系统检查通过，环境正常", style="green")
+            sys.exit(0)
+
+    except Exception as e:
+        console.print(f"❌ 系统检查失败: {e}", style="red")
+        sys.exit(1)
 
 
 @cli.command()

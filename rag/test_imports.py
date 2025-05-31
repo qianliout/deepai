@@ -38,6 +38,15 @@ def test_imports():
         print("  ✓ 导入 rag_chain...")
         from rag_chain import RAGChain
 
+        print("  ✓ 导入 chinese_tokenizer...")
+        from chinese_tokenizer import ChineseTokenizer
+
+        print("  ✓ 导入 query_expander...")
+        from query_expander import QueryExpander
+
+        print("  ✓ 导入 system_checker...")
+        from system_checker import SystemChecker
+
         print("✅ 所有模块导入成功！")
         return True
 

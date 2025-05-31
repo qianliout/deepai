@@ -23,10 +23,14 @@
     - 不考虑兼容之前代码，删除无用的代码
     - 整理代码，使用结构更清晰，日志更完善
   
-代码中还是有足的地方
-    代码应该做前置检查，最好提供一个可以快速检查的命令：python main.py check
-    在检查时不止要检查配置是否存在，还应该检查配置是否正确，比如要检查配置的api_key是否能调通模型，提供的redis是否能连接通
+rag代码中还是有足的地方
+    - 我的知识文件是中文，应该添加中文分词的相关功能，在做中文分词时提供两种分词方式，1：简单的手工分词，2：使用jieba分词器
+    - 代码应该做前置检查，最好提供一个可以快速检查的命令：python main.py check
+    在检查时不仅要检查配置是否存在，还应该检查配置是否正确，比如要检查配置的api_key是否能调通模型，提供的redis是否能连接通等等
     所以：项目中最好不要出现这样的代码,
         if not DASHSCOPE_AVAILABLE:
         if not self.api_key:
-    
+    - 查询扩展： _expand_query(self, query: str) 添加常同义词synonyms，不能手工维护
+      - 可以使用：https://github.com/chatopera/Synonyms 这个库
+    - 如果返回值是Dict[str, Any]类型的，请你定义成数据类的class
+    - 上述所有的更改都不需要考虑对现有代码兼容

@@ -8,6 +8,9 @@
 - **ChromaDB存储**: 使用ChromaDB作为唯一向量存储，底层SQLite持久化
 - **BGE嵌入模型**: 使用BAAI/bge-small-zh-v1.5中文嵌入模型
 - **通义百炼LLM**: 集成阿里云通义百炼大语言模型
+- **中文分词**: 支持jieba分词和手工分词两种方式
+- **查询扩展**: 使用Synonyms库进行同义词扩展，提高检索召回率
+- **系统检查**: 提供全面的环境和配置检查功能
 - **Redis会话**: 支持对话历史和会话管理
 - **一键测试**: 提供quick命令快速体验系统功能
 - **配置统一**: 所有配置集中在config.py中管理
@@ -36,27 +39,32 @@ export DASHSCOPE_API_KEY="your_dashscope_api_key"
 
 ### 基本使用
 
-1. **测试导入** (验证环境)：
+1. **系统检查** (推荐首次使用)：
+```bash
+python main.py check
+```
+
+2. **测试导入** (验证环境)：
 ```bash
 python test_imports.py
 ```
 
-2. **快速测试** (推荐首次使用)：
+3. **快速测试** (体验系统功能)：
 ```bash
 python main.py quick
 ```
 
-3. **构建知识库**：
+4. **构建知识库**：
 ```bash
 python main.py build --docs ./your_txt_documents_folder
 ```
 
-4. **查询问答**：
+5. **查询问答**：
 ```bash
 python main.py query "你的问题"
 ```
 
-5. **交互式对话**：
+6. **交互式对话**：
 ```bash
 python main.py chat
 ```
@@ -75,6 +83,9 @@ rag/
 ├── retriever.py           # 检索器
 ├── document_loader.py     # TXT文档加载器
 ├── text_splitter.py       # 文本分割器
+├── chinese_tokenizer.py   # 中文分词器
+├── query_expander.py      # 查询扩展器
+├── system_checker.py      # 系统检查器
 ├── logger.py              # 日志管理
 ├── test_imports.py        # 导入测试脚本
 └── data/                  # 数据目录
@@ -115,15 +126,41 @@ class LLMConfig:
     max_tokens: int = 2048              # 最大生成token数
 ```
 
+### 中文分词配置
+```python
+class ChineseTokenizerConfig:
+    tokenizer_type: str = "jieba"        # 分词器类型: manual/jieba
+    remove_stop_words: bool = True       # 是否移除停用词
+    user_dict_path: str = ""            # 用户词典路径
+```
+
+### 查询扩展配置
+```python
+class QueryExpansionConfig:
+    enable_synonyms: bool = True         # 是否启用同义词扩展
+    max_synonyms_per_word: int = 2       # 每个词的最大同义词数量
+    similarity_threshold: float = 0.7    # 同义词相似度阈值
+    max_expansion_ratio: float = 2.0     # 最大扩展比例
+```
+
 ## 📖 使用示例
 
 ### 快速测试流程
 
 ```bash
-# 1. 测试环境
+# 1. 系统检查 - 检查环境和配置
+python main.py check
+
+# 输出示例：
+# 🔍 RAG系统检查报告
+# 整体状态: ✅ SUCCESS
+# 检查项目: 8
+# 成功: 7 | 警告: 1 | 错误: 0
+
+# 2. 测试环境
 python test_imports.py
 
-# 2. 快速测试 - 自动创建示例文档并测试
+# 3. 快速测试 - 自动创建示例文档并测试
 python main.py quick
 
 # 输出示例：
@@ -167,6 +204,18 @@ print(f"文档数量: {stats['document_count']}")
 - 智能文本分割，保持语义完整性
 - 批量文档加载和处理
 
+### 中文分词
+- 支持jieba分词和手工分词两种方式
+- 自动停用词过滤
+- 支持用户自定义词典
+- 词频统计和分析功能
+
+### 查询扩展
+- 基于Synonyms库的同义词扩展
+- 可配置的相似度阈值
+- 智能扩展比例控制
+- 提高检索召回率
+
 ### 向量检索
 - ChromaDB向量存储，SQLite持久化
 - BGE中文嵌入模型，支持中英文
@@ -179,7 +228,19 @@ print(f"文档数量: {stats['document_count']}")
 - 支持对话历史管理
 - 可配置的生成参数
 
+### 系统检查
+- 全面的环境依赖检查
+- API连接状态验证
+- 数据库连接测试
+- 模型可用性检查
+- 系统资源监控
+
 ## 🔍 监控和调试
+
+### 系统检查
+```bash
+python main.py check
+```
 
 ### 查看系统状态
 ```bash
@@ -207,11 +268,14 @@ print(f"""
 
 ## 🚨 注意事项
 
-1. **API密钥**: 需要配置通义百炼API密钥才能使用LLM功能
-2. **文档格式**: 只支持TXT格式，其他格式需要先转换
-3. **内存使用**: BGE模型需要约1GB内存
-4. **设备支持**: 优先使用Apple Silicon GPU (MPS)，回退到CPU
-5. **扁平结构**: 所有模块都在根目录下，简化了导入关系
+1. **首次使用**: 建议先运行 `python main.py check` 检查系统环境
+2. **API密钥**: 需要配置通义百炼API密钥才能使用LLM功能
+3. **文档格式**: 只支持TXT格式，其他格式需要先转换
+4. **内存使用**: BGE模型需要约1GB内存
+5. **设备支持**: 优先使用Apple Silicon GPU (MPS)，回退到CPU
+6. **中文分词**: jieba分词器首次使用需要下载词典，可能需要一些时间
+7. **同义词扩展**: synonyms库首次使用需要下载模型文件
+8. **扁平结构**: 所有模块都在根目录下，简化了导入关系
 
 ## 🤝 贡献指南
 

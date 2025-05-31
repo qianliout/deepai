@@ -114,12 +114,26 @@ class RedisConfig(BaseModel):
     max_history: int = Field(default=20, description="最大历史记录数")
 
 
+class ChineseTokenizerConfig(BaseModel):
+    """中文分词配置"""
+    tokenizer_type: str = Field(default="jieba", description="分词器类型: manual/jieba")
+    remove_stop_words: bool = Field(default=True, description="是否移除停用词")
+    user_dict_path: str = Field(default="", description="用户词典路径")
+    enable_pos_tagging: bool = Field(default=False, description="是否启用词性标注")
+
+class QueryExpansionConfig(BaseModel):
+    """查询扩展配置"""
+    enable_synonyms: bool = Field(default=True, description="是否启用同义词扩展")
+    max_synonyms_per_word: int = Field(default=2, description="每个词的最大同义词数量")
+    similarity_threshold: float = Field(default=0.7, description="同义词相似度阈值")
+    max_expansion_ratio: float = Field(default=2.0, description="最大扩展比例")
+
 class RetrieverConfig(BaseModel):
     """检索器配置"""
 
     enable_hybrid_search: bool = Field(default=False, description="是否启用混合检索")
     enable_reranking: bool = Field(default=False, description="是否启用重排序")
-    enable_query_expansion: bool = Field(default=False, description="是否启用查询扩展")
+    enable_query_expansion: bool = Field(default=True, description="是否启用查询扩展")
     keyword_weight: float = Field(default=0.3, description="关键词检索权重")
     semantic_weight: float = Field(default=0.7, description="语义检索权重")
     rerank_top_k: int = Field(default=10, description="重排序候选数量")
@@ -165,6 +179,8 @@ class Config(BaseModel):
     text_splitter: TextSplitterConfig = Field(default_factory=TextSplitterConfig)
     redis: RedisConfig = Field(default_factory=RedisConfig)
     retriever: RetrieverConfig = Field(default_factory=RetrieverConfig)
+    chinese_tokenizer: ChineseTokenizerConfig = Field(default_factory=ChineseTokenizerConfig)
+    query_expansion: QueryExpansionConfig = Field(default_factory=QueryExpansionConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
 
     # 项目路径配置

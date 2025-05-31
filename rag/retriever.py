@@ -20,6 +20,7 @@ from langchain_core.retrievers import BaseRetriever
 
 from config import config
 from logger import get_logger, log_execution_time, LogExecutionTime
+from query_expander import QueryExpander
 
 
 @dataclass
@@ -56,6 +57,11 @@ class RetrieverManager(BaseRetriever):
         self.vector_store = vector_store
         self.embedding_manager = embedding_manager or vector_store.embedding_manager
         self.retrieval_config = config.retriever
+
+        # 初始化查询扩展器
+        self.query_expander = QueryExpander(
+            enable_synonyms=config.query_expansion.enable_synonyms
+        ) if config.retriever.enable_query_expansion else None
 
         # 初始化检索策略
         self.retrievers = {
@@ -154,23 +160,28 @@ class RetrieverManager(BaseRetriever):
         Returns:
             扩展后的查询
         """
-        # 简单的查询扩展实现
-        # 实际应用中可以使用同义词词典、词嵌入等方法
+        if not self.query_expander:
+            return query
 
-        # 添加常见同义词
-        synonyms = {
-            "AI": ["人工智能", "机器智能"],
-            "ML": ["机器学习", "机器学习算法"],
-            "DL": ["深度学习", "神经网络"],
-            "RAG": ["检索增强生成", "检索生成"],
-        }
+        try:
+            # 使用查询扩展器进行同义词扩展
+            expansion_result = self.query_expander.expand_query(
+                query,
+                max_synonyms_per_word=config.query_expansion.max_synonyms_per_word,
+                similarity_threshold=config.query_expansion.similarity_threshold,
+                max_expansion_ratio=config.query_expansion.max_expansion_ratio
+            )
 
-        expanded_terms = [query]
-        for term, syns in synonyms.items():
-            if term.lower() in query.lower():
-                expanded_terms.extend(syns)
+            self.logger.debug(
+                f"查询扩展: '{query}' -> '{expansion_result.expanded_query}' | "
+                f"扩展词数: {len(expansion_result.expansion_terms)}"
+            )
 
-        return " ".join(expanded_terms)
+            return expansion_result.expanded_query
+
+        except Exception as e:
+            self.logger.warning(f"查询扩展失败，使用原始查询: {e}")
+            return query
 
     def _postprocess_results(self, results: List[RetrievalResult], query: str) -> List[RetrievalResult]:
         """结果后处理
