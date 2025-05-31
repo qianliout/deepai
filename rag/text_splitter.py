@@ -18,7 +18,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter, CharacterTe
 
 from config import config
 from logger import get_logger, log_execution_time
-from chinese_tokenizer import ChineseTokenizer, TokenizerType
+from chinese_tokenizer import create_tokenizer
 
 
 @dataclass
@@ -49,8 +49,8 @@ class TextSplitterManager:
         self.logger = get_logger("TextSplitterManager")
 
         # 初始化中文分词器
-        tokenizer_type = TokenizerType(config.chinese_tokenizer.tokenizer_type)
-        self.chinese_tokenizer = ChineseTokenizer(tokenizer_type)
+        tokenizer_type = config.chinese_tokenizer.tokenizer_type
+        self.chinese_tokenizer = create_tokenizer(tokenizer_type)
 
         # 中文分割符优先级
         self.chinese_separators = [

@@ -60,7 +60,7 @@ class RetrieverManager(BaseRetriever):
 
         # 初始化查询扩展器
         self.query_expander = QueryExpander(
-            enable_synonyms=config.query_expansion.enable_synonyms
+            enable_expansion=config.query_expansion.enable_synonyms
         ) if config.retriever.enable_query_expansion else None
 
         # 初始化检索策略

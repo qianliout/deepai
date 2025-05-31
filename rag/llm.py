@@ -9,27 +9,15 @@
 2. 支持上下文管理和对话历史
 """
 
-import asyncio
 import time
-from typing import List, Dict, Any, Optional, Union, AsyncGenerator, Generator
+from typing import List, Dict, Any, Optional, Generator
 from dataclasses import dataclass
 import json
-
-try:
-    import dashscope
-    from dashscope import Generation
-
-    DASHSCOPE_AVAILABLE = True
-except ImportError:
-    DASHSCOPE_AVAILABLE = False
-
-from langchain_core.language_models.llms import LLM
-from langchain_core.callbacks.manager import CallbackManagerForLLMRun
-from langchain_core.outputs import GenerationChunk
+import dashscope
+from dashscope import Generation
 
 from config import config
 from logger import get_logger, log_execution_time, LogExecutionTime
-
 
 @dataclass
 class ChatMessage:
@@ -44,7 +32,7 @@ class ChatMessage:
         return {"role": self.role, "content": self.content}
 
 
-class LLMManager(LLM):
+class LLMManager:
     """大语言模型管理器
 
     基于通义百炼API实现的大语言模型接口，
@@ -64,10 +52,6 @@ class LLMManager(LLM):
             api_key: API密钥，默认使用配置中的密钥
             model_name: 模型名称，默认使用配置中的模型
         """
-        super().__init__()
-
-        if not DASHSCOPE_AVAILABLE:
-            raise ImportError("dashscope未安装，请运行: pip install dashscope")
 
         self.logger = get_logger("LLMManager")
         self.api_key = api_key or config.llm.api_key
@@ -96,19 +80,11 @@ class LLMManager(LLM):
         return "dashscope_qwen"
 
     @log_execution_time("llm_generate")
-    def _call(
-        self,
-        prompt: str,
-        stop: Optional[List[str]] = None,
-        run_manager: Optional[CallbackManagerForLLMRun] = None,
-        **kwargs: Any,
-    ) -> str:
-        """调用LLM生成文本
+    def generate(self, prompt: str, **kwargs: Any) -> str:
+        """生成文本
 
         Args:
             prompt: 输入提示词
-            stop: 停止词列表
-            run_manager: 回调管理器
             **kwargs: 额外参数
 
         Returns:

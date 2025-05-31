@@ -39,10 +39,10 @@ def test_imports():
         from rag_chain import RAGChain
 
         print("  ✓ 导入 chinese_tokenizer...")
-        from chinese_tokenizer import ChineseTokenizer
+        from chinese_tokenizer import create_tokenizer
 
         print("  ✓ 导入 query_expander...")
-        from query_expander import QueryExpander
+        from query_expander import SimpleQueryExpander
 
         print("  ✓ 导入 system_checker...")
         from system_checker import SystemChecker

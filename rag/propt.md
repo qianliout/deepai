@@ -34,3 +34,28 @@ rag代码中还是有足的地方
       - 可以使用：https://github.com/chatopera/Synonyms 这个库
     - 如果返回值是Dict[str, Any]类型的，请你定义成数据类的class
     - 上述所有的更改都不需要考虑对现有代码兼容
+
+
+
+对于rag项目继续帮助我改代码
+    - 我的python虚拟环境是deepai2,可以执行：conda activate aideep2
+    - 去除使用Synonyms进行query expander的功能， 改为手动实现的一个简单同义词替换功能
+    - ChineseTokenizer 应该拆分成两个类:SampleTokenizer和JiebaTokenizer
+    - 你现在是按一个完整的rag的项目来实现，但是我现在是想通过这个项目还学习rag的相关知识，你实现的很多功能太过于复杂，可以尽量简化
+    - 我想通过这个项目学习到的知识点有：
+      - rag的全部功能及在业界的最佳实践
+      - 分词:SampleTokenizer和JiebaTokenizer
+      - 向量存储（使用ChromaDB向量数据库，底层使用SQLite进行存储）
+      - 混合检索(结合关键词检索（BM25）+ 向量检索)
+      - 会话上下文保持(用户的query及回答等信息应该存在redis中)
+      - 流式对话
+      - 检索优化：多路召回（Hybrid Search)动态调整 Top-K,设定相似度阈值,重排序（Rerank）,Query扩展 等等优化方法。
+    - 当前项目的基础上改正，且不需要兼容现有代码  
+
+
+对于rag项目继续帮助我改代码
+    - 日志系统太过复杂,请简化，参考bert里的日志方式就好
+    - 提供子命令的方式太过复杂，参考bert/main.py
+    - 全局配置时进行拆分，参考bert/config.py，定义成
+    - 所有的修改不考虑兼容性，删除无用的代码
+    

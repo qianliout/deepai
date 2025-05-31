@@ -61,6 +61,10 @@ class RAGSystem:
             return
 
         with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
+            # 初始化LLM
+            task3 = progress.add_task("正在初始化大语言模型...", total=None)
+            self.llm_manager = LLMManager()
+            progress.update(task3, completed=True)
 
             # 初始化嵌入管理器
             task1 = progress.add_task("正在初始化嵌入模型...", total=None)
@@ -72,10 +76,7 @@ class RAGSystem:
             self.vector_store = VectorStoreManager(self.embedding_manager)
             progress.update(task2, completed=True)
 
-            # 初始化LLM
-            task3 = progress.add_task("正在初始化大语言模型...", total=None)
-            self.llm_manager = LLMManager()
-            progress.update(task3, completed=True)
+
 
             # 初始化文档加载器
             task4 = progress.add_task("正在初始化文档加载器...", total=None)

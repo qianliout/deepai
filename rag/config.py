@@ -32,7 +32,7 @@ class ChromaDBConfig(BaseModel):
     使用ChromaDB作为向量数据库，底层使用SQLite存储
     """
 
-    persist_directory: str = Field(default="data/vectorstore", description="ChromaDB数据持久化目录")
+    persist_directory: str = Field(default="/Users/liuqianli/work/docker/chromadb/data", description="ChromaDB数据持久化目录")
     collection_name: str = Field(default="knowledge_base", description="集合名称")
     top_k: int = Field(default=5, description="检索返回的文档数量")
     score_threshold: float = Field(default=0.7, description="相似度阈值")
@@ -74,7 +74,7 @@ class LLMConfig(BaseModel):
 
     # API配置
     api_key: str = Field(default="", description="通义百炼API密钥")
-    model_name: str = Field(default="qwen-max", description="模型名称")
+    model_name: str = Field(default="qwen-plus", description="模型名称")
 
     # 生成参数
     temperature: float = Field(default=0.7, description="采样温度，控制生成的随机性")
@@ -106,7 +106,7 @@ class RedisConfig(BaseModel):
     用于存储对话历史和会话上下文
     """
 
-    host: str = Field(default="localhost", description="Redis主机地址")
+    host: str = Field(default="127.0.0.1", description="Redis主机地址")
     port: int = Field(default=6379, description="Redis端口")
     password: str = Field(default="", description="Redis密码")
     db: int = Field(default=0, description="Redis数据库编号")
