@@ -25,6 +25,7 @@ from logger import get_logger, log_execution_time, LogExecutionTime
 @dataclass
 class RetrievalResult:
     """检索结果数据结构"""
+
     document: Document
     score: float
     retrieval_method: str
@@ -60,7 +61,7 @@ class RetrieverManager(BaseRetriever):
         self.retrievers = {
             "vector": VectorRetriever(vector_store, embedding_manager),
             "keyword": KeywordRetriever(vector_store),
-            "hybrid": HybridRetriever(vector_store, embedding_manager)
+            "hybrid": HybridRetriever(vector_store, embedding_manager),
         }
 
         self.logger.info("检索器管理器初始化完成")
@@ -79,13 +80,7 @@ class RetrieverManager(BaseRetriever):
         results = self.retrieve(query, **kwargs)
         return [result.document for result in results]
 
-    def retrieve(
-        self,
-        query: str,
-        top_k: Optional[int] = None,
-        strategy: Optional[str] = None,
-        **kwargs
-    ) -> List[RetrievalResult]:
+    def retrieve(self, query: str, top_k: Optional[int] = None, strategy: Optional[str] = None, **kwargs) -> List[RetrievalResult]:
         """执行检索
 
         Args:
@@ -167,7 +162,7 @@ class RetrieverManager(BaseRetriever):
             "AI": ["人工智能", "机器智能"],
             "ML": ["机器学习", "机器学习算法"],
             "DL": ["深度学习", "神经网络"],
-            "RAG": ["检索增强生成", "检索生成"]
+            "RAG": ["检索增强生成", "检索生成"],
         }
 
         expanded_terms = [query]
@@ -177,11 +172,7 @@ class RetrieverManager(BaseRetriever):
 
         return " ".join(expanded_terms)
 
-    def _postprocess_results(
-        self,
-        results: List[RetrievalResult],
-        query: str
-    ) -> List[RetrievalResult]:
+    def _postprocess_results(self, results: List[RetrievalResult], query: str) -> List[RetrievalResult]:
         """结果后处理
 
         Args:
@@ -210,11 +201,7 @@ class RetrieverManager(BaseRetriever):
 
         return unique_results
 
-    def _rerank_results(
-        self,
-        results: List[RetrievalResult],
-        query: str
-    ) -> List[RetrievalResult]:
+    def _rerank_results(self, results: List[RetrievalResult], query: str) -> List[RetrievalResult]:
         """重排序结果
 
         Args:
@@ -226,7 +213,7 @@ class RetrieverManager(BaseRetriever):
         """
         try:
             # 获取更多候选结果用于重排序
-            candidates = results[:self.retrieval_config.rerank_top_k]
+            candidates = results[: self.retrieval_config.rerank_top_k]
 
             # 计算重排序分数
             reranked_results = []
@@ -243,11 +230,7 @@ class RetrieverManager(BaseRetriever):
                 term_overlap = len(query_terms & doc_terms) / len(query_terms) if query_terms else 0
 
                 # 综合分数
-                new_score = (
-                    0.6 * semantic_score +
-                    0.2 * length_factor +
-                    0.2 * term_overlap
-                )
+                new_score = 0.6 * semantic_score + 0.2 * length_factor + 0.2 * term_overlap
 
                 result.score = new_score
                 reranked_results.append(result)
@@ -260,7 +243,7 @@ class RetrieverManager(BaseRetriever):
                 result.rank = i + 1
 
             # 添加未参与重排序的结果
-            remaining_results = results[self.retrieval_config.rerank_top_k:]
+            remaining_results = results[self.retrieval_config.rerank_top_k :]
             for i, result in enumerate(remaining_results):
                 result.rank = len(reranked_results) + i + 1
 
@@ -281,8 +264,8 @@ class RetrieverManager(BaseRetriever):
                 "enable_reranking": self.retrieval_config.enable_reranking,
                 "enable_query_expansion": self.retrieval_config.enable_query_expansion,
                 "keyword_weight": self.retrieval_config.keyword_weight,
-                "semantic_weight": self.retrieval_config.semantic_weight
-            }
+                "semantic_weight": self.retrieval_config.semantic_weight,
+            },
         }
 
 
@@ -308,20 +291,13 @@ class VectorRetriever(BaseRetrieverStrategy):
         try:
             # 使用向量存储进行相似度搜索
             results = self.vector_store.similarity_search(
-                query,
-                k=top_k,
-                score_threshold=kwargs.get('score_threshold', config.chromadb.score_threshold)
+                query, k=top_k, score_threshold=kwargs.get("score_threshold", config.chromadb.score_threshold)
             )
 
             # 转换为RetrievalResult格式
             retrieval_results = []
             for i, (doc, score) in enumerate(results):
-                retrieval_results.append(RetrievalResult(
-                    document=doc,
-                    score=score,
-                    retrieval_method="vector",
-                    rank=i + 1
-                ))
+                retrieval_results.append(RetrievalResult(document=doc, score=score, retrieval_method="vector", rank=i + 1))
 
             return retrieval_results
 
@@ -360,12 +336,9 @@ class KeywordRetriever(BaseRetrieverStrategy):
                     idf_score = 1.0  # 简化，实际应该计算IDF
                     keyword_score = tf_score * idf_score
 
-                    keyword_results.append(RetrievalResult(
-                        document=doc,
-                        score=keyword_score,
-                        retrieval_method="keyword",
-                        rank=0  # 稍后更新
-                    ))
+                    keyword_results.append(
+                        RetrievalResult(document=doc, score=keyword_score, retrieval_method="keyword", rank=0)  # 稍后更新
+                    )
 
             # 按分数排序
             keyword_results.sort(key=lambda x: x.score, reverse=True)
@@ -413,19 +386,11 @@ class HybridRetriever(BaseRetrieverStrategy):
             self.logger.error(f"混合检索失败: {e}")
             return []
 
-    def _fuse_results(
-        self,
-        vector_results: List[RetrievalResult],
-        keyword_results: List[RetrievalResult]
-    ) -> List[RetrievalResult]:
+    def _fuse_results(self, vector_results: List[RetrievalResult], keyword_results: List[RetrievalResult]) -> List[RetrievalResult]:
         """融合检索结果"""
         # 创建文档到结果的映射
-        doc_to_vector = {
-            hash(r.document.page_content): r for r in vector_results
-        }
-        doc_to_keyword = {
-            hash(r.document.page_content): r for r in keyword_results
-        }
+        doc_to_vector = {hash(r.document.page_content): r for r in vector_results}
+        doc_to_keyword = {hash(r.document.page_content): r for r in keyword_results}
 
         # 获取所有唯一文档
         all_doc_hashes = set(doc_to_vector.keys()) | set(doc_to_keyword.keys())
@@ -440,19 +405,11 @@ class HybridRetriever(BaseRetrieverStrategy):
             keyword_score = keyword_result.score if keyword_result else 0.0
 
             # 加权融合
-            fused_score = (
-                config.retriever.semantic_weight * vector_score +
-                config.retriever.keyword_weight * keyword_score
-            )
+            fused_score = config.retriever.semantic_weight * vector_score + config.retriever.keyword_weight * keyword_score
 
             # 选择文档（优先选择向量检索结果）
             document = vector_result.document if vector_result else keyword_result.document
 
-            fused_results.append(RetrievalResult(
-                document=document,
-                score=fused_score,
-                retrieval_method="hybrid",
-                rank=0  # 稍后更新
-            ))
+            fused_results.append(RetrievalResult(document=document, score=fused_score, retrieval_method="hybrid", rank=0))  # 稍后更新
 
         return fused_results

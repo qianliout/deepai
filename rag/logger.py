@@ -46,26 +46,14 @@ class LoggerManager:
             "<level>{message}</level>"
         )
 
-        logger.add(
-            sys.stdout,
-            format=console_format,
-            level=config.logging.level,
-            colorize=True,
-            backtrace=True,
-            diagnose=True
-        )
+        logger.add(sys.stdout, format=console_format, level=config.logging.level, colorize=True, backtrace=True, diagnose=True)
 
         # 文件输出配置
         log_dir = Path(config.logging.log_dir)
         log_dir.mkdir(parents=True, exist_ok=True)
 
         # 简化的日志格式
-        file_format = (
-            "{time:YYYY-MM-DD HH:mm:ss} | "
-            "{level: <8} | "
-            "{name}:{function}:{line} | "
-            "{message}"
-        )
+        file_format = "{time:YYYY-MM-DD HH:mm:ss} | " "{level: <8} | " "{name}:{function}:{line} | " "{message}"
 
         # 主日志文件
         logger.add(
@@ -75,7 +63,7 @@ class LoggerManager:
             rotation="1 day",
             retention=config.logging.retention,
             compression="zip",
-            encoding="utf-8"
+            encoding="utf-8",
         )
 
         # 错误日志文件
@@ -86,7 +74,7 @@ class LoggerManager:
             rotation="1 day",
             retention=config.logging.retention,
             compression="zip",
-            encoding="utf-8"
+            encoding="utf-8",
         )
 
         self._initialized = True
@@ -118,22 +106,23 @@ class LoggerManager:
             **kwargs: 额外的性能指标
         """
         perf_logger = logger.bind(PERFORMANCE=True)
-        perf_logger.info(
-            f"性能监控 | 操作: {operation} | 耗时: {duration:.4f}s | 详情: {kwargs}"
-        )
+        perf_logger.info(f"性能监控 | 操作: {operation} | 耗时: {duration:.4f}s | 详情: {kwargs}")
 
 
 # 全局日志管理器实例
 _logger_manager = LoggerManager()
+
 
 # 便捷函数
 def setup_logger(name: Optional[str] = None) -> None:
     """设置日志器的便捷函数"""
     _logger_manager.setup_logger(name)
 
+
 def get_logger(name: str):
     """获取日志器的便捷函数"""
     return _logger_manager.get_logger(name)
+
 
 def log_performance(operation: str, duration: float, **kwargs):
     """记录性能日志的便捷函数"""
@@ -165,7 +154,9 @@ def log_execution_time(operation_name: Optional[str] = None):
                 op_name = operation_name or f"{func.__module__}.{func.__name__}"
                 log_performance(f"{op_name}_ERROR", duration, error=str(e))
                 raise
+
         return wrapper
+
     return decorator
 
 
@@ -180,18 +171,15 @@ class LogExecutionTime:
 
     def __enter__(self):
         import time
+
         self.start_time = time.time()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         import time
+
         duration = time.time() - self.start_time
         if exc_type is None:
             log_performance(self.operation_name, duration, **self.extra_info)
         else:
-            log_performance(
-                f"{self.operation_name}_ERROR",
-                duration,
-                error=str(exc_val),
-                **self.extra_info
-            )
+            log_performance(f"{self.operation_name}_ERROR", duration, error=str(exc_val), **self.extra_info)

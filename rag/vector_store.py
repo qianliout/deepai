@@ -19,6 +19,7 @@ import uuid
 try:
     import chromadb
     from chromadb.config import Settings
+
     CHROMA_AVAILABLE = True
 except ImportError:
     CHROMA_AVAILABLE = False
@@ -66,37 +67,21 @@ class VectorStoreManager:
             persist_dir.mkdir(parents=True, exist_ok=True)
 
             # 初始化ChromaDB客户端
-            self.client = chromadb.PersistentClient(
-                path=str(persist_dir),
-                settings=Settings(
-                    anonymized_telemetry=False,
-                    allow_reset=True
-                )
-            )
+            self.client = chromadb.PersistentClient(path=str(persist_dir), settings=Settings(anonymized_telemetry=False, allow_reset=True))
 
             # 获取或创建集合
             self.collection = self.client.get_or_create_collection(
-                name=config.chromadb.collection_name,
-                metadata={"hnsw:space": "cosine"}  # 使用余弦相似度
+                name=config.chromadb.collection_name, metadata={"hnsw:space": "cosine"}  # 使用余弦相似度
             )
 
-            self.logger.info(
-                f"ChromaDB初始化成功 | 集合: {config.chromadb.collection_name} | "
-                f"文档数量: {self.collection.count()}"
-            )
+            self.logger.info(f"ChromaDB初始化成功 | 集合: {config.chromadb.collection_name} | " f"文档数量: {self.collection.count()}")
 
         except Exception as e:
             self.logger.error(f"ChromaDB初始化失败: {e}")
             raise
 
-
-
     @log_execution_time("add_documents")
-    def add_documents(
-        self,
-        documents: List[Document],
-        embeddings: Optional[List[List[float]]] = None
-    ) -> List[str]:
+    def add_documents(self, documents: List[Document], embeddings: Optional[List[List[float]]] = None) -> List[str]:
         """添加文档到向量存储
 
         Args:
@@ -125,12 +110,7 @@ class VectorStoreManager:
             metadatas = [doc.metadata for doc in documents]
 
             # 添加到ChromaDB
-            self.collection.add(
-                embeddings=embeddings,
-                documents=texts,
-                metadatas=metadatas,
-                ids=doc_ids
-            )
+            self.collection.add(embeddings=embeddings, documents=texts, metadatas=metadatas, ids=doc_ids)
 
             self.logger.info(f"成功添加 {len(documents)} 个文档到ChromaDB")
             return doc_ids
@@ -139,15 +119,8 @@ class VectorStoreManager:
             self.logger.error(f"添加文档失败: {e}")
             raise
 
-
-
     @log_execution_time("similarity_search")
-    def similarity_search(
-        self,
-        query: str,
-        k: int = None,
-        score_threshold: float = None
-    ) -> List[Tuple[Document, float]]:
+    def similarity_search(self, query: str, k: int = None, score_threshold: float = None) -> List[Tuple[Document, float]]:
         """相似度搜索
 
         Args:
@@ -169,22 +142,17 @@ class VectorStoreManager:
 
             # 在ChromaDB中搜索
             results = self.collection.query(
-                query_embeddings=[query_embedding],
-                n_results=k,
-                include=['documents', 'metadatas', 'distances']
+                query_embeddings=[query_embedding], n_results=k, include=["documents", "metadatas", "distances"]
             )
 
             documents_with_scores = []
-            for i in range(len(results['documents'][0])):
+            for i in range(len(results["documents"][0])):
                 # ChromaDB返回的是距离，需要转换为相似度
-                distance = results['distances'][0][i]
+                distance = results["distances"][0][i]
                 similarity = 1 - distance  # 余弦距离转相似度
 
                 if similarity >= score_threshold:
-                    doc = Document(
-                        page_content=results['documents'][0][i],
-                        metadata=results['metadatas'][0][i] or {}
-                    )
+                    doc = Document(page_content=results["documents"][0][i], metadata=results["metadatas"][0][i] or {})
                     documents_with_scores.append((doc, similarity))
 
             self.logger.debug(f"搜索完成，返回 {len(documents_with_scores)} 个结果")
@@ -193,8 +161,6 @@ class VectorStoreManager:
         except Exception as e:
             self.logger.error(f"相似度搜索失败: {e}")
             raise
-
-
 
     def get_stats(self) -> Dict[str, Any]:
         """获取向量存储统计信息"""
@@ -206,7 +172,7 @@ class VectorStoreManager:
                 "document_count": count,
                 "embedding_dim": self.embedding_manager.embedding_dim,
                 "collection_name": config.chromadb.collection_name,
-                "persist_directory": config.chromadb.persist_directory
+                "persist_directory": config.chromadb.persist_directory,
             }
         except Exception as e:
             self.logger.error(f"获取统计信息失败: {e}")
@@ -215,7 +181,7 @@ class VectorStoreManager:
                 "document_count": 0,
                 "embedding_dim": 0,
                 "collection_name": config.chromadb.collection_name,
-                "error": str(e)
+                "error": str(e),
             }
 
     def clear(self) -> None:
@@ -227,10 +193,7 @@ class VectorStoreManager:
             self.client.delete_collection(config.chromadb.collection_name)
 
             # 重新创建集合
-            self.collection = self.client.get_or_create_collection(
-                name=config.chromadb.collection_name,
-                metadata={"hnsw:space": "cosine"}
-            )
+            self.collection = self.client.get_or_create_collection(name=config.chromadb.collection_name, metadata={"hnsw:space": "cosine"})
 
             self.logger.info("ChromaDB向量存储已清空")
 
@@ -251,12 +214,7 @@ class VectorStoreManager:
             self.logger.error(f"删除文档失败: {e}")
             raise
 
-    def update_documents(
-        self,
-        doc_ids: List[str],
-        documents: List[Document],
-        embeddings: Optional[List[List[float]]] = None
-    ) -> None:
+    def update_documents(self, doc_ids: List[str], documents: List[Document], embeddings: Optional[List[List[float]]] = None) -> None:
         """更新指定文档
 
         Args:
@@ -275,12 +233,7 @@ class VectorStoreManager:
             metadatas = [doc.metadata for doc in documents]
 
             # 更新ChromaDB中的文档
-            self.collection.update(
-                ids=doc_ids,
-                embeddings=embeddings,
-                documents=texts,
-                metadatas=metadatas
-            )
+            self.collection.update(ids=doc_ids, embeddings=embeddings, documents=texts, metadatas=metadatas)
 
             self.logger.info(f"成功更新 {len(doc_ids)} 个文档")
 

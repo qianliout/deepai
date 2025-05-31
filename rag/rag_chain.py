@@ -28,6 +28,7 @@ from vector_store import VectorStoreManager
 @dataclass
 class RAGResponse:
     """RAG响应数据结构"""
+
     query: str
     answer: str
     retrieved_documents: List[Dict[str, Any]]
@@ -57,7 +58,7 @@ class RAGChain(Runnable):
         embedding_manager: Optional[EmbeddingManager] = None,
         vector_store: Optional[VectorStoreManager] = None,
         llm: Optional[LLMManager] = None,
-        retriever: Optional[RetrieverManager] = None
+        retriever: Optional[RetrieverManager] = None,
     ):
         """初始化RAG链
 
@@ -127,12 +128,7 @@ class RAGChain(Runnable):
 
     @log_execution_time("rag_process_query")
     def process_query(
-        self,
-        query: str,
-        top_k: Optional[int] = None,
-        retrieval_strategy: Optional[str] = None,
-        include_sources: bool = True,
-        **kwargs
+        self, query: str, top_k: Optional[int] = None, retrieval_strategy: Optional[str] = None, include_sources: bool = True, **kwargs
     ) -> RAGResponse:
         """处理查询请求
 
@@ -154,10 +150,7 @@ class RAGChain(Runnable):
             # 1. 检索相关文档
             retrieval_start = time.time()
             retrieved_results = self.retriever.retrieve(
-                query=query,
-                top_k=top_k or config.chromadb.top_k,
-                strategy=retrieval_strategy,
-                **kwargs
+                query=query, top_k=top_k or config.chromadb.top_k, strategy=retrieval_strategy, **kwargs
             )
             retrieval_time = time.time() - retrieval_start
 
@@ -190,7 +183,7 @@ class RAGChain(Runnable):
                         "metadata": result.document.metadata,
                         "score": result.score,
                         "rank": result.rank,
-                        "method": result.retrieval_method
+                        "method": result.retrieval_method,
                     }
                     for result in retrieved_results
                 ],
@@ -202,8 +195,8 @@ class RAGChain(Runnable):
                 metadata={
                     "retrieval_strategy": retrieval_strategy or "default",
                     "context_length": len(context),
-                    "num_retrieved_docs": len(retrieved_results)
-                }
+                    "num_retrieved_docs": len(retrieved_results),
+                },
             )
 
             self.logger.info(
@@ -265,17 +258,10 @@ class RAGChain(Runnable):
         """
         try:
             # 构建完整提示词
-            prompt = self.context_template.format(
-                context=context,
-                question=query
-            )
+            prompt = self.context_template.format(context=context, question=query)
 
             # 使用LLM生成回答
-            answer = self.llm.generate_with_context(
-                query=query,
-                context=context,
-                system_prompt=self.system_prompt
-            )
+            answer = self.llm.generate_with_context(query=query, context=context, system_prompt=self.system_prompt)
 
             return answer.strip()
 
@@ -283,11 +269,7 @@ class RAGChain(Runnable):
             self.logger.error(f"回答生成失败: {e}")
             return "抱歉，生成回答时出现错误。"
 
-    def _calculate_confidence(
-        self,
-        retrieved_results: List[RetrievalResult],
-        answer: str
-    ) -> float:
+    def _calculate_confidence(self, retrieved_results: List[RetrievalResult], answer: str) -> float:
         """计算置信度分数
 
         Args:
@@ -311,11 +293,7 @@ class RAGChain(Runnable):
             num_docs_factor = min(len(retrieved_results) / 3, 1.0)  # 3个文档为基准
 
             # 综合置信度
-            confidence = (
-                0.6 * avg_retrieval_score +
-                0.2 * answer_length_factor +
-                0.2 * num_docs_factor
-            )
+            confidence = 0.6 * avg_retrieval_score + 0.2 * answer_length_factor + 0.2 * num_docs_factor
 
             return min(max(confidence, 0.0), 1.0)
 
@@ -339,12 +317,12 @@ class RAGChain(Runnable):
             metadata = result.document.metadata
 
             # 提取文件来源
-            source = metadata.get('source', metadata.get('filename', '未知来源'))
+            source = metadata.get("source", metadata.get("filename", "未知来源"))
 
             # 添加页码信息（如果有）
-            if 'page_number' in metadata:
+            if "page_number" in metadata:
                 source += f" (第{metadata['page_number']}页)"
-            elif 'chunk_index' in metadata:
+            elif "chunk_index" in metadata:
                 source += f" (片段{metadata['chunk_index']})"
 
             # 去重
@@ -365,14 +343,10 @@ class RAGChain(Runnable):
             total_time=retrieval_time,
             confidence_score=0.0,
             sources=[],
-            metadata={"no_results": True}
+            metadata={"no_results": True},
         )
 
-    def stream_process_query(
-        self,
-        query: str,
-        **kwargs
-    ) -> Generator[Dict[str, Any], None, None]:
+    def stream_process_query(self, query: str, **kwargs) -> Generator[Dict[str, Any], None, None]:
         """流式处理查询
 
         Args:
@@ -395,18 +369,10 @@ class RAGChain(Runnable):
             retrieved_results = self.retriever.retrieve(query, **kwargs)
             retrieval_time = time.time() - retrieval_start
 
-            yield {
-                "type": "retrieval_complete",
-                "num_documents": len(retrieved_results),
-                "retrieval_time": retrieval_time
-            }
+            yield {"type": "retrieval_complete", "num_documents": len(retrieved_results), "retrieval_time": retrieval_time}
 
             if not retrieved_results:
-                yield {
-                    "type": "complete",
-                    "answer": "抱歉，没有找到相关信息。",
-                    "confidence_score": 0.0
-                }
+                yield {"type": "complete", "answer": "抱歉，没有找到相关信息。", "confidence_score": 0.0}
                 return
 
             # 2. 生成阶段
@@ -416,16 +382,9 @@ class RAGChain(Runnable):
 
             # 流式生成回答
             full_answer = ""
-            for chunk in self.llm.stream_chat(
-                message=query,
-                system_prompt=self.system_prompt
-            ):
+            for chunk in self.llm.stream_chat(message=query, system_prompt=self.system_prompt):
                 full_answer += chunk
-                yield {
-                    "type": "generation_chunk",
-                    "chunk": chunk,
-                    "partial_answer": full_answer
-                }
+                yield {"type": "generation_chunk", "chunk": chunk, "partial_answer": full_answer}
 
             # 3. 完成阶段
             confidence_score = self._calculate_confidence(retrieved_results, full_answer)
@@ -440,21 +399,17 @@ class RAGChain(Runnable):
                     {
                         "content": result.document.page_content[:200] + "...",
                         "score": result.score,
-                        "source": result.document.metadata.get('source', '未知')
+                        "source": result.document.metadata.get("source", "未知"),
                     }
                     for result in retrieved_results[:3]  # 只返回前3个
-                ]
+                ],
             }
 
         except Exception as e:
             self.logger.error(f"流式处理失败: {e}")
             yield {"type": "error", "error": str(e)}
 
-    def batch_process_queries(
-        self,
-        queries: List[str],
-        **kwargs
-    ) -> List[RAGResponse]:
+    def batch_process_queries(self, queries: List[str], **kwargs) -> List[RAGResponse]:
         """批量处理查询
 
         Args:
@@ -488,7 +443,7 @@ class RAGChain(Runnable):
                         total_time=0.0,
                         confidence_score=0.0,
                         sources=[],
-                        metadata={"error": True}
+                        metadata={"error": True},
                     )
                     responses.append(error_response)
 
@@ -505,7 +460,7 @@ class RAGChain(Runnable):
             "retriever_stats": self.retriever.get_retrieval_stats(),
             "llm_info": self.llm.get_model_info(),
             "embedding_info": self.embedding_manager.get_model_info(),
-            "vector_store_stats": self.vector_store.get_stats()
+            "vector_store_stats": self.vector_store.get_stats(),
         }
 
     def save_response(self, response: RAGResponse, filepath: str) -> None:
@@ -516,7 +471,7 @@ class RAGChain(Runnable):
             filepath: 保存路径
         """
         try:
-            with open(filepath, 'w', encoding='utf-8') as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(asdict(response), f, ensure_ascii=False, indent=2)
             self.logger.info(f"响应已保存到: {filepath}")
         except Exception as e:

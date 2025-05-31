@@ -63,19 +63,12 @@ class EmbeddingManager(Embeddings):
                 cache_dir.mkdir(parents=True, exist_ok=True)
 
                 # 加载模型
-                self.model = SentenceTransformer(
-                    self.model_name,
-                    cache_folder=str(cache_dir),
-                    device=self.device
-                )
+                self.model = SentenceTransformer(self.model_name, cache_folder=str(cache_dir), device=self.device)
 
                 # 获取嵌入维度
                 self.embedding_dim = self.model.get_sentence_embedding_dimension()
 
-                self.logger.info(
-                    f"嵌入模型加载成功 | 模型: {self.model_name} | "
-                    f"设备: {self.device} | 维度: {self.embedding_dim}"
-                )
+                self.logger.info(f"嵌入模型加载成功 | 模型: {self.model_name} | " f"设备: {self.device} | 维度: {self.embedding_dim}")
 
             except Exception as e:
                 self.logger.error(f"嵌入模型加载失败: {e}")
@@ -103,17 +96,14 @@ class EmbeddingManager(Embeddings):
                 batch_size=config.embedding.batch_size,
                 show_progress_bar=len(texts) > 10,
                 normalize_embeddings=config.embedding.normalize_embeddings,
-                convert_to_numpy=True
+                convert_to_numpy=True,
             )
 
             # 转换为列表格式
             # embeddings shape: [num_texts, embedding_dim]
             result = embeddings.tolist()
 
-            self.logger.debug(
-                f"文档嵌入完成 | 数量: {len(texts)} | "
-                f"向量维度: {embeddings.shape}"
-            )
+            self.logger.debug(f"文档嵌入完成 | 数量: {len(texts)} | " f"向量维度: {embeddings.shape}")
 
             return result
 
@@ -136,10 +126,7 @@ class EmbeddingManager(Embeddings):
 
             # 单个文本编码
             embedding = self.model.encode(
-                [text],
-                batch_size=1,
-                normalize_embeddings=config.embedding.normalize_embeddings,
-                convert_to_numpy=True
+                [text], batch_size=1, normalize_embeddings=config.embedding.normalize_embeddings, convert_to_numpy=True
             )
 
             # embedding shape: [1, embedding_dim] -> [embedding_dim]
@@ -153,11 +140,7 @@ class EmbeddingManager(Embeddings):
             self.logger.error(f"查询嵌入失败: {e}")
             raise
 
-    def embed_batch(
-        self,
-        texts: List[str],
-        batch_size: Optional[int] = None
-    ) -> np.ndarray:
+    def embed_batch(self, texts: List[str], batch_size: Optional[int] = None) -> np.ndarray:
         """批量嵌入文本（返回numpy数组）
 
         Args:
@@ -175,7 +158,7 @@ class EmbeddingManager(Embeddings):
                 batch_size=batch_size,
                 show_progress_bar=len(texts) > 10,
                 normalize_embeddings=config.embedding.normalize_embeddings,
-                convert_to_numpy=True
+                convert_to_numpy=True,
             )
 
             return embeddings
@@ -184,11 +167,7 @@ class EmbeddingManager(Embeddings):
             self.logger.error(f"批量嵌入失败: {e}")
             raise
 
-    def similarity(
-        self,
-        text1: Union[str, List[float]],
-        text2: Union[str, List[float]]
-    ) -> float:
+    def similarity(self, text1: Union[str, List[float]], text2: Union[str, List[float]]) -> float:
         """计算两个文本或向量的相似度
 
         Args:
@@ -230,13 +209,8 @@ class EmbeddingManager(Embeddings):
             "device": self.device,
             "embedding_dim": self.embedding_dim,
             "max_length": config.embedding.max_length,
-            "normalize_embeddings": config.embedding.normalize_embeddings
+            "normalize_embeddings": config.embedding.normalize_embeddings,
         }
 
     def __repr__(self) -> str:
-        return (
-            f"EmbeddingManager("
-            f"model={self.model_name}, "
-            f"device={self.device}, "
-            f"dim={self.embedding_dim})"
-        )
+        return f"EmbeddingManager(" f"model={self.model_name}, " f"device={self.device}, " f"dim={self.embedding_dim})"

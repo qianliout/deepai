@@ -23,6 +23,7 @@ from logger import get_logger, log_execution_time
 @dataclass
 class DocumentInfo:
     """文档信息数据结构"""
+
     filepath: str
     filename: str
     file_size: int
@@ -47,9 +48,7 @@ class DocumentLoader:
         self.logger = get_logger("DocumentLoader")
 
         # 支持的文件类型映射
-        self.supported_extensions = {
-            '.txt': self._load_text,
-        }
+        self.supported_extensions = {".txt": self._load_text}
 
         self.logger.info(f"文档加载器初始化完成，支持 {len(self.supported_extensions)} 种文件格式")
 
@@ -95,12 +94,7 @@ class DocumentLoader:
             self.logger.error(f"文档加载失败: {filepath}, 错误: {e}")
             raise
 
-    def load_directory(
-        self,
-        directory: Union[str, Path],
-        recursive: bool = True,
-        file_pattern: Optional[str] = None
-    ) -> List[Document]:
+    def load_directory(self, directory: Union[str, Path], recursive: bool = True, file_pattern: Optional[str] = None) -> List[Document]:
         """加载目录中的所有TXT文档
 
         Args:
@@ -134,10 +128,7 @@ class DocumentLoader:
                 files = directory.glob(pattern)
 
             # 过滤支持的文件类型
-            supported_files = [
-                f for f in files
-                if f.is_file() and f.suffix.lower() in self.supported_extensions
-            ]
+            supported_files = [f for f in files if f.is_file() and f.suffix.lower() in self.supported_extensions]
 
             # 加载每个文件
             for filepath in supported_files:
@@ -149,10 +140,7 @@ class DocumentLoader:
                     self.logger.warning(f"跳过文件 {filepath}: {e}")
                     continue
 
-            self.logger.info(
-                f"目录加载完成: {directory}，"
-                f"处理 {file_count} 个文件，生成 {len(all_documents)} 个文档对象"
-            )
+            self.logger.info(f"目录加载完成: {directory}，" f"处理 {file_count} 个文件，生成 {len(all_documents)} 个文档对象")
 
             return all_documents
 
@@ -175,11 +163,7 @@ class DocumentLoader:
         file_hash = self._calculate_file_hash(filepath)
 
         return DocumentInfo(
-            filepath=str(filepath),
-            filename=filepath.name,
-            file_size=stat.st_size,
-            file_type=filepath.suffix.lower(),
-            file_hash=file_hash
+            filepath=str(filepath), filename=filepath.name, file_size=stat.st_size, file_type=filepath.suffix.lower(), file_hash=file_hash
         )
 
     def _calculate_file_hash(self, filepath: Path) -> str:
@@ -201,11 +185,11 @@ class DocumentLoader:
             文档对象列表
         """
         # 尝试不同的编码
-        encodings = ['utf-8', 'gbk', 'gb2312', 'latin-1']
+        encodings = ["utf-8", "gbk", "gb2312", "latin-1"]
 
         for encoding in encodings:
             try:
-                with open(filepath, 'r', encoding=encoding) as file:
+                with open(filepath, "r", encoding=encoding) as file:
                     content = file.read()
                     doc_info.encoding = encoding
                     break
@@ -219,10 +203,7 @@ class DocumentLoader:
         doc_info.word_count = len(content.split())
 
         # 创建元数据
-        metadata = {
-            **doc_info.__dict__,
-            'source_type': 'text'
-        }
+        metadata = {**doc_info.__dict__, "source_type": "text"}
 
         return [Document(page_content=content, metadata=metadata)]
 

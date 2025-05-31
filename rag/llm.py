@@ -18,6 +18,7 @@ import json
 try:
     import dashscope
     from dashscope import Generation
+
     DASHSCOPE_AVAILABLE = True
 except ImportError:
     DASHSCOPE_AVAILABLE = False
@@ -33,6 +34,7 @@ from logger import get_logger, log_execution_time, LogExecutionTime
 @dataclass
 class ChatMessage:
     """聊天消息数据结构"""
+
     role: str  # 'user', 'assistant', 'system'
     content: str
     timestamp: Optional[float] = None
@@ -161,22 +163,17 @@ class LLMManager(LLM):
                         raise Exception(error_msg)
                     else:
                         self.logger.warning(f"{error_msg}，正在重试 ({attempt + 1}/{max_retries})")
-                        time.sleep(2 ** attempt)  # 指数退避
+                        time.sleep(2**attempt)  # 指数退避
 
             except Exception as e:
                 if attempt == max_retries:
                     raise
                 else:
                     self.logger.warning(f"API调用异常: {e}，正在重试 ({attempt + 1}/{max_retries})")
-                    time.sleep(2 ** attempt)
+                    time.sleep(2**attempt)
 
     @log_execution_time("llm_chat")
-    def chat(
-        self,
-        message: str,
-        system_prompt: Optional[str] = None,
-        clear_history: bool = False
-    ) -> str:
+    def chat(self, message: str, system_prompt: Optional[str] = None, clear_history: bool = False) -> str:
         """对话接口
 
         Args:
@@ -224,11 +221,7 @@ class LLMManager(LLM):
             self.logger.error(f"对话失败: {e}")
             raise
 
-    def stream_chat(
-        self,
-        message: str,
-        system_prompt: Optional[str] = None
-    ) -> Generator[str, None, None]:
+    def stream_chat(self, message: str, system_prompt: Optional[str] = None) -> Generator[str, None, None]:
         """流式对话接口
 
         Args:
@@ -275,12 +268,7 @@ class LLMManager(LLM):
             self.logger.error(f"流式对话失败: {e}")
             raise
 
-    def generate_with_context(
-        self,
-        query: str,
-        context: str,
-        system_prompt: Optional[str] = None
-    ) -> str:
+    def generate_with_context(self, query: str, context: str, system_prompt: Optional[str] = None) -> str:
         """基于上下文生成回答（RAG核心功能）
 
         Args:
@@ -320,14 +308,7 @@ class LLMManager(LLM):
         Returns:
             对话历史列表
         """
-        return [
-            {
-                "role": msg.role,
-                "content": msg.content,
-                "timestamp": msg.timestamp
-            }
-            for msg in self.chat_history
-        ]
+        return [{"role": msg.role, "content": msg.content, "timestamp": msg.timestamp} for msg in self.chat_history]
 
     def save_history(self, filepath: str) -> None:
         """保存对话历史到文件
@@ -336,7 +317,7 @@ class LLMManager(LLM):
             filepath: 保存路径
         """
         try:
-            with open(filepath, 'w', encoding='utf-8') as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(self.get_history(), f, ensure_ascii=False, indent=2)
             self.logger.info(f"对话历史已保存到: {filepath}")
         except Exception as e:
@@ -350,16 +331,11 @@ class LLMManager(LLM):
             filepath: 文件路径
         """
         try:
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, "r", encoding="utf-8") as f:
                 history_data = json.load(f)
 
             self.chat_history = [
-                ChatMessage(
-                    role=item["role"],
-                    content=item["content"],
-                    timestamp=item.get("timestamp")
-                )
-                for item in history_data
+                ChatMessage(role=item["role"], content=item["content"], timestamp=item.get("timestamp")) for item in history_data
             ]
 
             self.logger.info(f"对话历史已从 {filepath} 加载，共 {len(self.chat_history)} 条记录")
@@ -379,5 +355,5 @@ class LLMManager(LLM):
             "temperature": config.llm.temperature,
             "top_p": config.llm.top_p,
             "max_tokens": config.llm.max_tokens,
-            "chat_history_length": len(self.chat_history)
+            "chat_history_length": len(self.chat_history),
         }

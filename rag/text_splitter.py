@@ -14,11 +14,7 @@ import re
 from typing import List, Dict, Any, Optional, Callable
 from dataclasses import dataclass
 from langchain_core.documents import Document
-from langchain_text_splitters import (
-    RecursiveCharacterTextSplitter,
-    CharacterTextSplitter,
-    TokenTextSplitter
-)
+from langchain_text_splitters import RecursiveCharacterTextSplitter, CharacterTextSplitter, TokenTextSplitter
 
 from config import config
 from logger import get_logger, log_execution_time
@@ -27,6 +23,7 @@ from logger import get_logger, log_execution_time
 @dataclass
 class SplitResult:
     """分割结果数据结构"""
+
     chunks: List[str]
     chunk_count: int
     total_chars: int
@@ -52,50 +49,45 @@ class TextSplitterManager:
 
         # 中文分割符优先级
         self.chinese_separators = [
-            "\n\n",      # 段落分隔
-            "\n",        # 行分隔
-            "。",        # 句号
-            "！",        # 感叹号
-            "？",        # 问号
-            "；",        # 分号
-            "，",        # 逗号
-            " ",         # 空格
-            ""           # 字符级分割
+            "\n\n",  # 段落分隔
+            "\n",  # 行分隔
+            "。",  # 句号
+            "！",  # 感叹号
+            "？",  # 问号
+            "；",  # 分号
+            "，",  # 逗号
+            " ",  # 空格
+            "",  # 字符级分割
         ]
 
         # 英文分割符优先级
         self.english_separators = [
-            "\n\n",      # 段落分隔
-            "\n",        # 行分隔
-            ". ",        # 句号+空格
-            "! ",        # 感叹号+空格
-            "? ",        # 问号+空格
-            "; ",        # 分号+空格
-            ", ",        # 逗号+空格
-            " ",         # 空格
-            ""           # 字符级分割
+            "\n\n",  # 段落分隔
+            "\n",  # 行分隔
+            ". ",  # 句号+空格
+            "! ",  # 感叹号+空格
+            "? ",  # 问号+空格
+            "; ",  # 分号+空格
+            ", ",  # 逗号+空格
+            " ",  # 空格
+            "",  # 字符级分割
         ]
 
         # 代码分割符
         self.code_separators = [
-            "\n\n",      # 空行
+            "\n\n",  # 空行
             "\nclass ",  # 类定义
-            "\ndef ",    # 函数定义
-            "\n\n",      # 段落
-            "\n",        # 行
-            " ",         # 空格
-            ""           # 字符级
+            "\ndef ",  # 函数定义
+            "\n\n",  # 段落
+            "\n",  # 行
+            " ",  # 空格
+            "",  # 字符级
         ]
 
         self.logger.info("文本分割管理器初始化完成")
 
     @log_execution_time("split_documents")
-    def split_documents(
-        self,
-        documents: List[Document],
-        strategy: str = "recursive",
-        **kwargs
-    ) -> List[Document]:
+    def split_documents(self, documents: List[Document], strategy: str = "recursive", **kwargs) -> List[Document]:
         """分割文档列表
 
         Args:
@@ -121,9 +113,7 @@ class TextSplitterManager:
                 chunks = self._split_single_document(doc, splitter)
                 split_docs.extend(chunks)
 
-            self.logger.info(
-                f"文档分割完成 | 原始: {len(documents)} -> 分块: {len(split_docs)}"
-            )
+            self.logger.info(f"文档分割完成 | 原始: {len(documents)} -> 分块: {len(split_docs)}")
 
             return split_docs
 
@@ -152,24 +142,16 @@ class TextSplitterManager:
         if strategy == "recursive":
             # 递归字符分割器（推荐）
             separators = kwargs.get("separators", self._get_separators_by_language(kwargs.get("language", "mixed")))
-            return RecursiveCharacterTextSplitter(
-                separators=separators,
-                **params
-            )
+            return RecursiveCharacterTextSplitter(separators=separators, **params)
 
         elif strategy == "character":
             # 字符分割器
             separator = kwargs.get("separator", "\n\n")
-            return CharacterTextSplitter(
-                separator=separator,
-                **params
-            )
+            return CharacterTextSplitter(separator=separator, **params)
 
         elif strategy == "token":
             # Token分割器
-            return TokenTextSplitter(
-                **params
-            )
+            return TokenTextSplitter(**params)
 
         elif strategy == "semantic":
             # 语义分割器（自定义实现）
@@ -217,17 +199,16 @@ class TextSplitterManager:
                 if chunk.strip():  # 跳过空块
                     # 复制原始元数据并添加分块信息
                     metadata = document.metadata.copy()
-                    metadata.update({
-                        "chunk_index": i,
-                        "chunk_count": len(chunks),
-                        "chunk_size": len(chunk),
-                        "original_doc_id": metadata.get("file_hash", "unknown")
-                    })
+                    metadata.update(
+                        {
+                            "chunk_index": i,
+                            "chunk_count": len(chunks),
+                            "chunk_size": len(chunk),
+                            "original_doc_id": metadata.get("file_hash", "unknown"),
+                        }
+                    )
 
-                    split_docs.append(Document(
-                        page_content=chunk,
-                        metadata=metadata
-                    ))
+                    split_docs.append(Document(page_content=chunk, metadata=metadata))
 
             return split_docs
 
@@ -241,6 +222,7 @@ class TextSplitterManager:
 
         基于语义边界进行分割，保持语义完整性
         """
+
         class SemanticSplitter:
             def __init__(self, chunk_size, chunk_overlap, **kwargs):
                 self.chunk_size = chunk_size
@@ -250,7 +232,7 @@ class TextSplitterManager:
             def split_text(self, text: str) -> List[str]:
                 """语义分割实现"""
                 # 首先按段落分割
-                paragraphs = re.split(r'\n\s*\n', text)
+                paragraphs = re.split(r"\n\s*\n", text)
 
                 chunks = []
                 current_chunk = ""
@@ -266,7 +248,7 @@ class TextSplitterManager:
 
                         # 处理重叠
                         if self.chunk_overlap > 0:
-                            overlap_text = current_chunk[-self.chunk_overlap:]
+                            overlap_text = current_chunk[-self.chunk_overlap :]
                             current_chunk = overlap_text + "\n" + paragraph
                         else:
                             current_chunk = paragraph
@@ -298,11 +280,11 @@ class TextSplitterManager:
             "total_chars": len(text),
             "total_words": len(text.split()),
             "total_lines": len(text.splitlines()),
-            "paragraphs": len(re.split(r'\n\s*\n', text)),
-            "sentences": len(re.split(r'[。！？.!?]+', text)),
+            "paragraphs": len(re.split(r"\n\s*\n", text)),
+            "sentences": len(re.split(r"[。！？.!?]+", text)),
             "language": self._detect_language(text),
             "has_code": self._has_code_blocks(text),
-            "structure_type": self._detect_structure_type(text)
+            "structure_type": self._detect_structure_type(text),
         }
 
         return analysis
@@ -310,8 +292,8 @@ class TextSplitterManager:
     def _detect_language(self, text: str) -> str:
         """检测文本语言"""
         # 简单的语言检测
-        chinese_chars = len(re.findall(r'[\u4e00-\u9fff]', text))
-        english_chars = len(re.findall(r'[a-zA-Z]', text))
+        chinese_chars = len(re.findall(r"[\u4e00-\u9fff]", text))
+        english_chars = len(re.findall(r"[a-zA-Z]", text))
 
         total_chars = chinese_chars + english_chars
         if total_chars == 0:
@@ -329,12 +311,12 @@ class TextSplitterManager:
     def _has_code_blocks(self, text: str) -> bool:
         """检测是否包含代码块"""
         code_patterns = [
-            r'```[\s\S]*?```',  # Markdown代码块
-            r'`[^`]+`',         # 行内代码
-            r'def\s+\w+\s*\(',  # Python函数
-            r'class\s+\w+\s*:', # Python类
-            r'function\s+\w+\s*\(',  # JavaScript函数
-            r'#include\s*<',    # C/C++头文件
+            r"```[\s\S]*?```",  # Markdown代码块
+            r"`[^`]+`",  # 行内代码
+            r"def\s+\w+\s*\(",  # Python函数
+            r"class\s+\w+\s*:",  # Python类
+            r"function\s+\w+\s*\(",  # JavaScript函数
+            r"#include\s*<",  # C/C++头文件
         ]
 
         for pattern in code_patterns:
@@ -346,15 +328,15 @@ class TextSplitterManager:
     def _detect_structure_type(self, text: str) -> str:
         """检测文档结构类型"""
         # 检测标题结构
-        if re.search(r'^#{1,6}\s+', text, re.MULTILINE):
+        if re.search(r"^#{1,6}\s+", text, re.MULTILINE):
             return "markdown"
 
         # 检测列表结构
-        if re.search(r'^\s*[-*+]\s+', text, re.MULTILINE):
+        if re.search(r"^\s*[-*+]\s+", text, re.MULTILINE):
             return "list"
 
         # 检测表格结构
-        if re.search(r'\|.*\|', text):
+        if re.search(r"\|.*\|", text):
             return "table"
 
         # 检测代码结构
@@ -380,7 +362,7 @@ class TextSplitterManager:
         elif analysis["structure_type"] == "markdown":
             return "recursive"  # Markdown使用递归分割
         elif analysis["paragraphs"] > 10:
-            return "semantic"   # 长文档使用语义分割
+            return "semantic"  # 长文档使用语义分割
         else:
             return "recursive"  # 默认使用递归分割
 
@@ -427,7 +409,7 @@ class TextSplitterManager:
             "min_chunk_size": min(chunk_sizes),
             "max_chunk_size": max(chunk_sizes),
             "total_chars": sum(chunk_sizes),
-            "chunks_per_doc": len(split_docs) / len(original_docs) if original_docs else 0
+            "chunks_per_doc": len(split_docs) / len(original_docs) if original_docs else 0,
         }
 
         return stats

@@ -59,11 +59,7 @@ class RAGSystem:
         if self._initialized:
             return
 
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console
-        ) as progress:
+        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
 
             # 初始化嵌入管理器
             task1 = progress.add_task("正在初始化嵌入模型...", total=None)
@@ -127,7 +123,7 @@ class RAGSystem:
             # 批量处理文档
             batch_size = 50
             for i in range(0, len(documents), batch_size):
-                batch = documents[i:i + batch_size]
+                batch = documents[i : i + batch_size]
                 self.vector_store.add_documents(batch)
                 progress.update(task, advance=len(batch))
 
@@ -177,29 +173,28 @@ class RAGSystem:
         if not self._initialized:
             self.initialize()
 
-        console.print(Panel.fit(
-            "🤖 RAG知识库交互式对话\n\n"
-            "输入 'quit' 或 'exit' 退出\n"
-            "输入 'clear' 清空对话历史\n"
-            "输入 'stats' 查看系统状态",
-            title="欢迎使用RAG知识库",
-            border_style="blue"
-        ))
+        console.print(
+            Panel.fit(
+                "🤖 RAG知识库交互式对话\n\n" "输入 'quit' 或 'exit' 退出\n" "输入 'clear' 清空对话历史\n" "输入 'stats' 查看系统状态",
+                title="欢迎使用RAG知识库",
+                border_style="blue",
+            )
+        )
 
         while True:
             try:
                 user_input = console.input("\n[bold blue]您:[/bold blue] ")
 
-                if user_input.lower() in ['quit', 'exit', '退出']:
+                if user_input.lower() in ["quit", "exit", "退出"]:
                     console.print("👋 再见！", style="green")
                     break
 
-                if user_input.lower() in ['clear', '清空']:
+                if user_input.lower() in ["clear", "清空"]:
                     self.llm_manager.clear_history()
                     console.print("🗑️ 对话历史已清空", style="yellow")
                     continue
 
-                if user_input.lower() in ['stats', '状态']:
+                if user_input.lower() in ["stats", "状态"]:
                     stats = self.vector_store.get_stats()
                     self._display_stats(stats)
                     continue
@@ -237,7 +232,7 @@ rag_system = RAGSystem()
 
 
 @click.group()
-@click.option('--debug', is_flag=True, help='启用调试模式')
+@click.option("--debug", is_flag=True, help="启用调试模式")
 def cli(debug):
     """RAG个人知识库命令行工具"""
     if debug:
@@ -246,15 +241,10 @@ def cli(debug):
 
 
 @cli.command()
-@click.option('--docs', default='rag/data/samples', help='示例文档目录')
+@click.option("--docs", default="rag/data/samples", help="示例文档目录")
 def quick(docs):
     """快速测试RAG系统"""
-    console.print(Panel.fit(
-        "🚀 RAG系统快速测试\n\n"
-        "这将使用示例文档快速测试系统功能",
-        title="快速测试",
-        border_style="green"
-    ))
+    console.print(Panel.fit("🚀 RAG系统快速测试\n\n" "这将使用示例文档快速测试系统功能", title="快速测试", border_style="green"))
 
     # 创建示例文档
     docs_path = Path(docs)
@@ -282,17 +272,13 @@ RAG（Retrieval-Augmented Generation）是一种结合了检索和生成的AI技
 
 RAG技术能够有效解决大语言模型的知识局限性问题。
         """
-        sample_doc.write_text(sample_content, encoding='utf-8')
+        sample_doc.write_text(sample_content, encoding="utf-8")
 
     # 构建知识库
     rag_system.build_knowledge_base(docs, clear_existing=True)
 
     # 测试查询
-    test_queries = [
-        "什么是RAG？",
-        "RAG有哪些应用场景？",
-        "RAG的主要特点是什么？"
-    ]
+    test_queries = ["什么是RAG？", "RAG有哪些应用场景？", "RAG的主要特点是什么？"]
 
     console.print("\n🧪 开始测试查询...")
     for query in test_queries:
@@ -304,16 +290,16 @@ RAG技术能够有效解决大语言模型的知识局限性问题。
 
 
 @cli.command()
-@click.option('--docs', required=True, help='文档目录路径')
-@click.option('--clear', is_flag=True, help='清空现有知识库')
+@click.option("--docs", required=True, help="文档目录路径")
+@click.option("--clear", is_flag=True, help="清空现有知识库")
 def build(docs, clear):
     """构建知识库"""
     rag_system.build_knowledge_base(docs, clear_existing=clear)
 
 
 @cli.command()
-@click.argument('question')
-@click.option('--top-k', default=5, help='检索文档数量')
+@click.argument("question")
+@click.option("--top-k", default=5, help="检索文档数量")
 def query(question, top_k):
     """查询知识库"""
     answer = rag_system.query_knowledge_base(question, top_k=top_k)
@@ -324,9 +310,6 @@ def query(question, top_k):
 def chat():
     """启动交互式对话"""
     rag_system.interactive_chat()
-
-
-
 
 
 @cli.command()
@@ -345,12 +328,12 @@ def clear():
     if not rag_system._initialized:
         rag_system.initialize()
 
-    if click.confirm('确定要清空知识库吗？'):
+    if click.confirm("确定要清空知识库吗？"):
         rag_system.vector_store.clear()
         console.print("✅ 知识库已清空", style="green")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
         cli()
     except KeyboardInterrupt:
