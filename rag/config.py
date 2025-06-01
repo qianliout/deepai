@@ -108,21 +108,14 @@ class LoggingConfig(BaseModel):
         extra = "forbid"
 
 
-# 全局配置实例 - 参考BERT项目的方式
-EMBEDDING_CONFIG = EmbeddingConfig()
-LLM_CONFIG = LLMConfig()
-VECTORSTORE_CONFIG = VectorStoreConfig()
-TEXT_SPLITTER_CONFIG = TextSplitterConfig()
-TOKENIZER_CONFIG = TokenizerConfig()
-PATH_CONFIG = PathConfig()
-LOGGING_CONFIG = LoggingConfig()
+
 
 
 def get_device() -> str:
     """自动检测设备"""
     try:
         import torch
-        if EMBEDDING_CONFIG.device == "auto":
+        if defaultConfig.embedding.device == "auto":
             if torch.cuda.is_available():
                 return "cuda"
             elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
@@ -130,43 +123,43 @@ def get_device() -> str:
             else:
                 return "cpu"
         else:
-            return EMBEDDING_CONFIG.device
+            return defaultConfig.embedding.device
     except ImportError:
         return "cpu"
 
 
 def setup_logging():
     """设置日志系统"""
-    log_dir = Path(PATH_CONFIG.log_dir)
+    log_dir = Path(defaultConfig.path.log_dir)
     log_dir.mkdir(parents=True, exist_ok=True)
-    
+
     log_filename = f"rag_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
     log_filepath = log_dir / log_filename
-    
+
     logging.basicConfig(
-        level=getattr(logging, LOGGING_CONFIG.log_level),
-        format=LOGGING_CONFIG.log_format,
+        level=getattr(logging, defaultConfig.logging.log_level),
+        format=defaultConfig.logging.log_format,
         handlers=[
             logging.StreamHandler(),
             logging.FileHandler(log_filepath, encoding="utf-8"),
         ],
     )
-    
+
     logger = logging.getLogger("RAG")
-    logger.setLevel(getattr(logging, LOGGING_CONFIG.log_level))
+    logger.setLevel(getattr(logging, defaultConfig.logging.log_level))
     return logger
 
 
 def create_directories():
     """创建所有必要的目录"""
     directories = [
-        PATH_CONFIG.data_dir,
-        PATH_CONFIG.documents_dir,
-        PATH_CONFIG.vectorstore_dir,
-        PATH_CONFIG.log_dir,
-        EMBEDDING_CONFIG.cache_dir,
+        defaultConfig.path.data_dir,
+        defaultConfig.path.documents_dir,
+        defaultConfig.path.vectorstore_dir,
+        defaultConfig.path.log_dir,
+        defaultConfig.embedding.cache_dir,
     ]
-    
+
     for directory in directories:
         Path(directory).mkdir(parents=True, exist_ok=True)
         print(f"✅ 创建目录: {directory}")
@@ -175,10 +168,10 @@ def create_directories():
 def load_env_config():
     """从环境变量加载配置"""
     if api_key := os.getenv("DASHSCOPE_API_KEY"):
-        LLM_CONFIG.api_key = api_key
-    
+        defaultConfig.llm.api_key = api_key
+
     if device := os.getenv("RAG_DEVICE"):
-        EMBEDDING_CONFIG.device = device
+        defaultConfig.embedding.device = device
 
 
 def print_config():
@@ -186,34 +179,34 @@ def print_config():
     print("=" * 50)
     print("RAG个人知识库配置信息")
     print("=" * 50)
-    
+
     print(f"\n🤖 LLM配置:")
-    print(f"  模型: {LLM_CONFIG.model_name}")
-    print(f"  温度: {LLM_CONFIG.temperature}")
-    print(f"  最大tokens: {LLM_CONFIG.max_tokens}")
-    print(f"  API密钥: {'已设置' if LLM_CONFIG.api_key else '未设置'}")
-    
+    print(f"  模型: {defaultConfig.llm.model_name}")
+    print(f"  温度: {defaultConfig.llm.temperature}")
+    print(f"  最大tokens: {defaultConfig.llm.max_tokens}")
+    print(f"  API密钥: {'已设置' if defaultConfig.llm.api_key else '未设置'}")
+
     print(f"\n📊 嵌入配置:")
-    print(f"  模型: {EMBEDDING_CONFIG.model_name}")
+    print(f"  模型: {defaultConfig.embedding.model_name}")
     print(f"  设备: {get_device()}")
-    print(f"  最大长度: {EMBEDDING_CONFIG.max_length}")
-    print(f"  批次大小: {EMBEDDING_CONFIG.batch_size}")
-    
+    print(f"  最大长度: {defaultConfig.embedding.max_length}")
+    print(f"  批次大小: {defaultConfig.embedding.batch_size}")
+
     print(f"\n🗂️ 向量存储配置:")
-    print(f"  存储目录: {VECTORSTORE_CONFIG.persist_directory}")
-    print(f"  集合名称: {VECTORSTORE_CONFIG.collection_name}")
-    print(f"  检索数量: {VECTORSTORE_CONFIG.top_k}")
-    print(f"  相似度阈值: {VECTORSTORE_CONFIG.score_threshold}")
-    
+    print(f"  存储目录: {defaultConfig.vector_store.persist_directory}")
+    print(f"  集合名称: {defaultConfig.vector_store.collection_name}")
+    print(f"  检索数量: {defaultConfig.vector_store.top_k}")
+    print(f"  相似度阈值: {defaultConfig.vector_store.score_threshold}")
+
     print(f"\n📝 文本分割配置:")
-    print(f"  块大小: {TEXT_SPLITTER_CONFIG.chunk_size}")
-    print(f"  重叠大小: {TEXT_SPLITTER_CONFIG.chunk_overlap}")
-    
+    print(f"  块大小: {defaultConfig.text_splitter.chunk_size}")
+    print(f"  重叠大小: {defaultConfig.text_splitter.chunk_overlap}")
+
     print(f"\n📁 路径配置:")
-    print(f"  数据目录: {PATH_CONFIG.data_dir}")
-    print(f"  文档目录: {PATH_CONFIG.documents_dir}")
-    print(f"  日志目录: {PATH_CONFIG.log_dir}")
-    
+    print(f"  数据目录: {defaultConfig.path.data_dir}")
+    print(f"  文档目录: {defaultConfig.path.documents_dir}")
+    print(f"  日志目录: {defaultConfig.path.log_dir}")
+
     print("=" * 50)
 
 
@@ -223,10 +216,9 @@ class Config(BaseModel):
     embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
     llm: LLMConfig = Field(default_factory=LLMConfig)
     text_splitter: TextSplitterConfig = Field(default_factory=TextSplitterConfig)
-
-    data_dir: str = Field(default="data", description="数据目录")
-    knowledge_dir: str = Field(default="knowledge", description="知识库文档目录")
-    log_dir: str = Field(default="logs", description="日志目录")
+    tokenizer: TokenizerConfig = Field(default_factory=TokenizerConfig)
+    path: PathConfig = Field(default_factory=PathConfig)
+    logging: LoggingConfig = Field(default_factory=LoggingConfig)
 
 # 默认配置实例
 defaultConfig = Config()

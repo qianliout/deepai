@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from langchain_core.documents import Document
 
 from logger import get_logger, log_execution_time
-from config import VECTORSTORE_CONFIG
+from config import defaultConfig
 
 
 @dataclass
@@ -67,7 +67,7 @@ class RetrieverManager:
         Returns:
             检索结果列表
         """
-        top_k = top_k or VECTORSTORE_CONFIG.top_k
+        top_k = top_k or defaultConfig.vector_store.top_k
 
         try:
             self.logger.debug(f"开始检索: {query[:50]}... | top_k: {top_k}")
@@ -76,7 +76,7 @@ class RetrieverManager:
             results = self.vector_store.similarity_search(
                 query,
                 k=top_k,
-                score_threshold=kwargs.get("score_threshold", VECTORSTORE_CONFIG.score_threshold)
+                score_threshold=kwargs.get("score_threshold", defaultConfig.vector_store.score_threshold)
             )
 
             # 转换为RetrievalResult格式
@@ -105,8 +105,8 @@ class RetrieverManager:
         return {
             "vector_store_stats": vector_stats,
             "retrieval_method": "simple_vector",
-            "top_k": VECTORSTORE_CONFIG.top_k,
-            "score_threshold": VECTORSTORE_CONFIG.score_threshold,
+            "top_k": defaultConfig.vector_store.top_k,
+            "score_threshold": defaultConfig.vector_store.score_threshold,
         }
 
 

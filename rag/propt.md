@@ -70,3 +70,15 @@ rag代码中还是有足的地方
     - 不仅仅是文件合并，还得保证程序正确 
     - 检查项目，并执行所有的命令，如有错，请改正
     - 所有的修改不考虑兼容性，删除无用的代码
+
+对于rag项目继续帮助我改代码,
+    删除这几行代码及相对应的代码
+    EMBEDDING_CONFIG = EmbeddingConfig()
+    LLM_CONFIG = LLMConfig()
+    VECTORSTORE_CONFIG = VectorStoreConfig()
+    TEXT_SPLITTER_CONFIG = TextSplitterConfig()
+    TOKENIZER_CONFIG = TokenizerConfig()
+    PATH_CONFIG = PathConfig()
+    LOGGING_CONFIG = LoggingConfig()
+    使用全局defaultConfig（已在config.py中定义）
+

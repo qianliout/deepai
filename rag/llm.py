@@ -16,7 +16,7 @@ import json
 import dashscope
 from dashscope import Generation
 
-from config import LLM_CONFIG
+from config import defaultConfig
 from logger import get_logger, log_execution_time, LogExecutionTime
 
 @dataclass
@@ -54,8 +54,8 @@ class LLMManager:
         """
 
         self.logger = get_logger("LLMManager")
-        self.api_key = api_key or LLM_CONFIG.api_key
-        self.model_name = model_name or LLM_CONFIG.model_name
+        self.api_key = api_key or defaultConfig.llm.api_key
+        self.model_name = model_name or defaultConfig.llm.model_name
         self.chat_history: List[ChatMessage] = []
 
         # 设置API密钥
@@ -67,9 +67,9 @@ class LLMManager:
         # 生成配置
         self.generation_config = {
             "model": self.model_name,
-            "temperature": LLM_CONFIG.temperature,
-            "top_p": LLM_CONFIG.top_p,
-            "max_tokens": LLM_CONFIG.max_tokens,
+            "temperature": defaultConfig.llm.temperature,
+            "top_p": defaultConfig.llm.top_p,
+            "max_tokens": defaultConfig.llm.max_tokens,
         }
 
         self.logger.info(f"LLM管理器初始化成功 | 模型: {self.model_name}")
@@ -126,7 +126,7 @@ class LLMManager:
         params["messages"] = messages
 
         # 重试机制
-        max_retries = LLM_CONFIG.max_retries
+        max_retries = defaultConfig.llm.max_retries
         for attempt in range(max_retries + 1):
             try:
                 response = Generation.call(**params)
@@ -327,8 +327,8 @@ class LLMManager:
         """
         return {
             "model_name": self.model_name,
-            "temperature": LLM_CONFIG.temperature,
-            "top_p": LLM_CONFIG.top_p,
-            "max_tokens": LLM_CONFIG.max_tokens,
+            "temperature": defaultConfig.llm.temperature,
+            "top_p": defaultConfig.llm.top_p,
+            "max_tokens": defaultConfig.llm.max_tokens,
             "chat_history_length": len(self.chat_history),
         }

@@ -393,7 +393,7 @@ def test_imports():
 
     try:
         print("  ✓ 导入 config...")
-        from config import EMBEDDING_CONFIG, LLM_CONFIG, VECTORSTORE_CONFIG
+        from config import defaultConfig
 
         print("  ✓ 导入 logger...")
         from logger import get_logger, log_execution_time

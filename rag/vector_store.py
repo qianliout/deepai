@@ -26,7 +26,7 @@ except ImportError:
 
 from langchain_core.documents import Document
 
-from config import VECTORSTORE_CONFIG
+from config import defaultConfig
 from logger import get_logger, log_execution_time
 
 
@@ -63,7 +63,7 @@ class VectorStoreManager:
             self.logger.info("正在初始化ChromaDB存储")
 
             # 创建持久化目录
-            persist_dir = Path(VECTORSTORE_CONFIG.persist_directory)
+            persist_dir = Path(defaultConfig.vector_store.persist_directory)
             persist_dir.mkdir(parents=True, exist_ok=True)
 
             # 初始化ChromaDB客户端
@@ -71,10 +71,10 @@ class VectorStoreManager:
 
             # 获取或创建集合
             self.collection = self.client.get_or_create_collection(
-                name=VECTORSTORE_CONFIG.collection_name, metadata={"hnsw:space": "cosine"}  # 使用余弦相似度
+                name=defaultConfig.vector_store.collection_name, metadata={"hnsw:space": "cosine"}  # 使用余弦相似度
             )
 
-            self.logger.info(f"ChromaDB初始化成功 | 集合: {VECTORSTORE_CONFIG.collection_name} | " f"文档数量: {self.collection.count()}")
+            self.logger.info(f"ChromaDB初始化成功 | 集合: {defaultConfig.vector_store.collection_name} | " f"文档数量: {self.collection.count()}")
 
         except Exception as e:
             self.logger.error(f"ChromaDB初始化失败: {e}")
@@ -131,8 +131,8 @@ class VectorStoreManager:
         Returns:
             (文档, 相似度分数) 元组列表，按相似度降序排列
         """
-        k = k or VECTORSTORE_CONFIG.top_k
-        score_threshold = score_threshold or VECTORSTORE_CONFIG.score_threshold
+        k = k or defaultConfig.vector_store.top_k
+        score_threshold = score_threshold or defaultConfig.vector_store.score_threshold
 
         try:
             self.logger.debug(f"开始相似度搜索: {query[:50]}...")
@@ -171,8 +171,8 @@ class VectorStoreManager:
                 "store_type": "chromadb",
                 "document_count": count,
                 "embedding_dim": self.embedding_manager.embedding_dim,
-                "collection_name": VECTORSTORE_CONFIG.collection_name,
-                "persist_directory": VECTORSTORE_CONFIG.persist_directory,
+                "collection_name": defaultConfig.vector_store.collection_name,
+                "persist_directory": defaultConfig.vector_store.persist_directory,
             }
         except Exception as e:
             self.logger.error(f"获取统计信息失败: {e}")
@@ -180,7 +180,7 @@ class VectorStoreManager:
                 "store_type": "chromadb",
                 "document_count": 0,
                 "embedding_dim": 0,
-                "collection_name": VECTORSTORE_CONFIG.collection_name,
+                "collection_name": defaultConfig.vector_store.collection_name,
                 "error": str(e),
             }
 
@@ -190,10 +190,10 @@ class VectorStoreManager:
             self.logger.info("正在清空ChromaDB向量存储")
 
             # 删除现有集合
-            self.client.delete_collection(VECTORSTORE_CONFIG.collection_name)
+            self.client.delete_collection(defaultConfig.vector_store.collection_name)
 
             # 重新创建集合
-            self.collection = self.client.get_or_create_collection(name=VECTORSTORE_CONFIG.collection_name, metadata={"hnsw:space": "cosine"})
+            self.collection = self.client.get_or_create_collection(name=defaultConfig.vector_store.collection_name, metadata={"hnsw:space": "cosine"})
 
             self.logger.info("ChromaDB向量存储已清空")
 

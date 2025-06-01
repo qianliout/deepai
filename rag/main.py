@@ -10,7 +10,7 @@ from pathlib import Path
 
 from config import (
     setup_logging, print_config, create_directories, load_env_config,
-    LLM_CONFIG, EMBEDDING_CONFIG, VECTORSTORE_CONFIG, TEXT_SPLITTER_CONFIG
+    defaultConfig
 )
 
 logger = logging.getLogger("RAG")
@@ -57,7 +57,7 @@ def run_build():
         print("\n✅ 知识库构建完成！")
         print(f"文档数量: {len(documents)}")
         print(f"文档块数量: {len(split_docs)}")
-        print(f"向量存储目录: {VECTORSTORE_CONFIG.persist_directory}")
+        print(f"向量存储目录: {defaultConfig.vector_store.persist_directory}")
         
     except Exception as e:
         logger.error(f"构建知识库失败: {e}")
@@ -170,16 +170,16 @@ def run_status():
         
         print(f"\n📚 知识库状态:")
         print(f"  文档数量: {doc_count}")
-        print(f"  存储目录: {VECTORSTORE_CONFIG.persist_directory}")
-        print(f"  集合名称: {VECTORSTORE_CONFIG.collection_name}")
-        
+        print(f"  存储目录: {defaultConfig.vector_store.persist_directory}")
+        print(f"  集合名称: {defaultConfig.vector_store.collection_name}")
+
         print(f"\n🤖 LLM状态:")
-        print(f"  模型: {LLM_CONFIG.model_name}")
-        print(f"  API密钥: {'已设置' if LLM_CONFIG.api_key else '未设置'}")
-        
+        print(f"  模型: {defaultConfig.llm.model_name}")
+        print(f"  API密钥: {'已设置' if defaultConfig.llm.api_key else '未设置'}")
+
         print(f"\n📊 嵌入模型状态:")
-        print(f"  模型: {EMBEDDING_CONFIG.model_name}")
-        print(f"  设备: {EMBEDDING_CONFIG.device}")
+        print(f"  模型: {defaultConfig.embedding.model_name}")
+        print(f"  设备: {defaultConfig.embedding.device}")
         
     except Exception as e:
         logger.error(f"获取状态失败: {e}")

@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Optional, Generator
 from dataclasses import dataclass
 
 from logger import get_logger, log_execution_time
-from config import LLM_CONFIG, VECTORSTORE_CONFIG
+from config import defaultConfig
 from embeddings import EmbeddingManager
 from vector_store import VectorStoreManager
 from llm import LLMManager
@@ -189,7 +189,7 @@ class RAGChain:
             return {
                 "vector_store": vector_stats,
                 "retrieval": retrieval_stats,
-                "llm_model": LLM_CONFIG.model_name,
+                "llm_model": defaultConfig.llm.model_name,
                 "chat_history_length": len(self.chat_history),
             }
         except Exception as e:
