@@ -45,7 +45,7 @@ class RAGChain:
             self.vector_store = VectorStoreManager(self.embedding_manager)
             
             # 检索器 - 延迟导入避免循环依赖
-            from simple_retriever import RetrieverManager
+            from retriever import RetrieverManager
             self.retriever = RetrieverManager(self.vector_store, self.embedding_manager)
             
             # LLM

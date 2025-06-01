@@ -45,7 +45,7 @@ class VectorStoreConfig(BaseModel):
     persist_directory: str = Field(default="data/vectorstore", description="ChromaDB数据目录")
     collection_name: str = Field(default="knowledge_base", description="集合名称")
     top_k: int = Field(default=5, description="检索返回数量")
-    score_threshold: float = Field(default=0.7, description="相似度阈值")
+    score_threshold: float = Field(default=0.3, description="相似度阈值")
     
     class Config:
         extra = "forbid"
@@ -216,6 +216,20 @@ def print_config():
     
     print("=" * 50)
 
+
+class Config(BaseModel):
+    """总配置类"""
+    vector_store: VectorStoreConfig = Field(default_factory=VectorStoreConfig)
+    embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
+    llm: LLMConfig = Field(default_factory=LLMConfig)
+    text_splitter: TextSplitterConfig = Field(default_factory=TextSplitterConfig)
+
+    data_dir: str = Field(default="data", description="数据目录")
+    knowledge_dir: str = Field(default="knowledge", description="知识库文档目录")
+    log_dir: str = Field(default="logs", description="日志目录")
+
+# 默认配置实例
+defaultConfig = Config()
 
 
 if __name__ == "__main__":

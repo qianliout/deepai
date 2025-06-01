@@ -70,7 +70,7 @@ def run_chat():
     print("=" * 50)
     
     try:
-        from simple_rag_chain import RAGChain
+        from rag_chain import RAGChain
         
         # 初始化RAG链
         print("正在初始化RAG系统...")
@@ -119,7 +119,7 @@ def run_query(query: str):
     print("=" * 50)
     
     try:
-        from simple_rag_chain import RAGChain
+        from rag_chain import RAGChain
         
         rag_chain = RAGChain()
         response = rag_chain.query(query)

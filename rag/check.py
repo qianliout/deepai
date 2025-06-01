@@ -385,3 +385,51 @@ class SystemChecker:
                     print(f"   - {issue}")
 
         print("\n" + "=" * 60)
+
+
+def test_imports():
+    """测试所有模块导入"""
+    print("🧪 开始测试模块导入...")
+
+    try:
+        print("  ✓ 导入 config...")
+        from config import EMBEDDING_CONFIG, LLM_CONFIG, VECTORSTORE_CONFIG
+
+        print("  ✓ 导入 logger...")
+        from logger import get_logger, log_execution_time
+
+        print("  ✓ 导入 document_loader...")
+        from document_loader import DocumentLoader
+
+        print("  ✓ 导入 embeddings...")
+        from embeddings import EmbeddingManager
+
+        print("  ✓ 导入 vector_store...")
+        from vector_store import VectorStoreManager
+
+        print("  ✓ 导入 llm...")
+        from llm import LLMManager
+
+        print("  ✓ 导入 text_splitter...")
+        from text_splitter import TextSplitterManager
+
+        print("  ✓ 导入 retriever...")
+        from retriever import RetrieverManager
+
+        print("  ✓ 导入 rag_chain...")
+        from rag_chain import RAGChain
+
+        print("  ✓ 导入 chinese_tokenizer...")
+        from tokenizer import create_tokenizer
+
+        print("  ✓ 导入 query_expander...")
+        from query_expander import SimpleQueryExpander
+
+
+
+        print("✅ 所有模块导入成功！")
+        return True
+
+    except Exception as e:
+        print(f"❌ 导入失败: {e}")
+        return False

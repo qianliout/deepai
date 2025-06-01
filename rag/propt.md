@@ -67,6 +67,6 @@ rag代码中还是有足的地方
 对于rag项目继续帮助我改代码,
     - 合并simple_rag_chain.py到rag_chain.py中
     - 合并simple_retriever.py到retriever.py中
-    - 合并test_imports.py，test_split.py和system_checker.py到一个新的check.py文件中
     - 不仅仅是文件合并，还得保证程序正确 
+    - 检查项目，并执行所有的命令，如有错，请改正
     - 所有的修改不考虑兼容性，删除无用的代码
