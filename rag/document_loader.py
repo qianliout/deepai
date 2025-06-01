@@ -49,7 +49,8 @@ class DocumentLoader:
         # 支持的文件类型映射
         self.supported_extensions = {".txt": self._load_text}
 
-        self.logger.info(f"文档加载器初始化完成，支持 {len(self.supported_extensions)} 种文件格式")
+        # self.logger.info(f"文档加载器初始化完成，支持 {len(self.supported_extensions)} 种文件格式")
+        self.logger.info(f"文档加载器初始化完成，支持的格式有：{self.get_supported_formats()}")
 
     @log_execution_time("load_document")
     def load_document(self, filepath: Union[str, Path]) -> List[Document]:
@@ -73,7 +74,7 @@ class DocumentLoader:
         extension = filepath.suffix.lower()
 
         if extension not in self.supported_extensions:
-            raise ValueError(f"不支持的文件格式: {extension}，仅支持 .txt 文件")
+            raise ValueError(f"不支持的文件格式: {extension}，仅支持 {self.get_supported_formats()} 的文件")
 
         try:
             self.logger.info(f"开始加载文档: {filepath}")

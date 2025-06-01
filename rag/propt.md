@@ -82,3 +82,7 @@ rag代码中还是有足的地方
     LOGGING_CONFIG = LoggingConfig()
     使用全局defaultConfig（已在config.py中定义）
 
+
+对于rag项目请继续改代码
+    - 每一次对话保存到redis
+    - 

@@ -108,7 +108,3 @@ class RetrieverManager:
             "top_k": defaultConfig.vector_store.top_k,
             "score_threshold": defaultConfig.vector_store.score_threshold,
         }
-
-
-# 为了兼容性，保留原来的类名
-SimpleRetrieverManager = RetrieverManager

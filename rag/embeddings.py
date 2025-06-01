@@ -44,12 +44,9 @@ class EmbeddingManager(Embeddings):
         self.logger = get_logger("EmbeddingManager")
         self.model_name = model_name or defaultConfig.embedding.model_name
         self.device = get_device()
-        self.model = None
-        self.embedding_dim = None
+        self.model, self.embedding_dim = self._load_model()
 
-        self._load_model()
-
-    def _load_model(self) -> None:
+    def _load_model(self) -> Tuple[SentenceTransformer, int]:
         """加载嵌入模型
 
         数据流：模型下载/加载 -> 设备配置 -> 维度获取
@@ -61,14 +58,12 @@ class EmbeddingManager(Embeddings):
                 # 设置模型缓存目录
                 cache_dir = Path(defaultConfig.embedding.cache_dir)
                 cache_dir.mkdir(parents=True, exist_ok=True)
-
                 # 加载模型
-                self.model = SentenceTransformer(self.model_name, cache_folder=str(cache_dir), device=self.device)
-
+                model = SentenceTransformer(self.model_name, cache_folder=str(cache_dir), device=self.device, local_files_only=True)
                 # 获取嵌入维度
-                self.embedding_dim = self.model.get_sentence_embedding_dimension()
-
-                self.logger.info(f"嵌入模型加载成功 | 模型: {self.model_name} | " f"设备: {self.device} | 维度: {self.embedding_dim}")
+                embedding_dim  = model.get_sentence_embedding_dimension()
+                self.logger.info(f"嵌入模型加载成功 | 模型: {self.model_name} | " f"设备: {self.device} | 维度: {embedding_dim}")
+                return model, embedding_dim
 
             except Exception as e:
                 self.logger.error(f"嵌入模型加载失败: {e}")
@@ -125,9 +120,7 @@ class EmbeddingManager(Embeddings):
             self.logger.debug(f"开始嵌入查询: {text[:50]}...")
 
             # 单个文本编码
-            embedding = self.model.encode(
-                [text], batch_size=1, normalize_embeddings=True, convert_to_numpy=True
-            )
+            embedding = self.model.encode([text], batch_size=1, normalize_embeddings=True, convert_to_numpy=True)
 
             # embedding shape: [1, embedding_dim] -> [embedding_dim]
             result = embedding[0].tolist()

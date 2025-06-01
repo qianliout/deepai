@@ -18,14 +18,8 @@ import re
 from typing import List, Set
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-
 # jieba分词器导入
-try:
-    import jieba
-    JIEBA_AVAILABLE = True
-except ImportError:
-    JIEBA_AVAILABLE = False
-
+import jieba
 from logger import get_logger
 
 
@@ -199,9 +193,6 @@ class JiebaTokenizer(BaseTokenizer):
         """初始化jieba分词器"""
         super().__init__()
         
-        if not JIEBA_AVAILABLE:
-            raise ImportError("jieba库未安装，请先安装: pip install jieba")
-        
         # 初始化jieba
         self._init_jieba()
         self.logger.info("Jieba分词器初始化完成")
@@ -313,10 +304,6 @@ def create_tokenizer(tokenizer_type: str = "jieba") -> BaseTokenizer:
     if tokenizer_type.lower() == "simple":
         return SimpleTokenizer()
     elif tokenizer_type.lower() == "jieba":
-        if JIEBA_AVAILABLE:
-            return JiebaTokenizer()
-        else:
-            print("警告: jieba库未安装，回退到简单分词器")
-            return SimpleTokenizer()
+        return JiebaTokenizer()
     else:
         raise ValueError(f"不支持的分词器类型: {tokenizer_type}")

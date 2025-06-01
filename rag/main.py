@@ -1,8 +1,3 @@
-"""
-RAG个人知识库主程序
-参考BERT项目的简化方式，使用argparse子命令，所有参数在config.py中配置
-"""
-
 import argparse
 import logging
 import sys

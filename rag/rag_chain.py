@@ -12,7 +12,7 @@ from config import defaultConfig
 from embeddings import EmbeddingManager
 from vector_store import VectorStoreManager
 from llm import LLMManager
-
+from retriever import RetrieverManager
 
 @dataclass
 class RAGResponse:
@@ -45,7 +45,7 @@ class RAGChain:
             self.vector_store = VectorStoreManager(self.embedding_manager)
             
             # 检索器 - 延迟导入避免循环依赖
-            from retriever import RetrieverManager
+            # from retriever import RetrieverManager
             self.retriever = RetrieverManager(self.vector_store, self.embedding_manager)
             
             # LLM
@@ -89,7 +89,8 @@ class RAGChain:
             
             # 3. 构建提示词
             prompt = self._build_prompt(question, context)
-            
+            self.logger.info(f"提示词构建完成: {prompt[:100]}...")
+             
             # 4. 生成回答
             start_time = time.time()
             answer = self.llm.generate(prompt)
@@ -129,6 +130,7 @@ class RAGChain:
             context_docs = [result.document.page_content for result in retrieval_results]
             context = "\n\n".join(context_docs)
             
+            self.logger.info(f"上下文构建完成: context: {context[:100]}...")
             # 构建提示词
             prompt = self._build_prompt(question, context)
             

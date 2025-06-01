@@ -19,6 +19,7 @@ from dashscope import Generation
 from config import defaultConfig
 from logger import get_logger, log_execution_time, LogExecutionTime
 
+
 @dataclass
 class ChatMessage:
     """聊天消息数据结构"""
@@ -90,26 +91,22 @@ class LLMManager:
         Returns:
             生成的文本
         """
-        try:
-            self.logger.debug(f"开始生成文本，提示词长度: {len(prompt)}")
+        self.logger.debug(f"开始生成文本，提示词长度: {len(prompt)}")
 
-            # 准备消息
-            messages = [{"role": "user", "content": prompt}]
+        # 准备消息
+        messages = [{"role": "user", "content": prompt}]
 
-            # 调用API
-            response = self._call_api(messages, **kwargs)
+        # 调用API
+        response = self._call_api(messages, **kwargs)
 
-            # 提取生成的文本
-            if response and response.output:
-                generated_text = response.output.text
-                self.logger.debug(f"文本生成成功，长度: {len(generated_text)}")
-                return generated_text
-            else:
-                raise ValueError("API响应格式错误")
-
-        except Exception as e:
-            self.logger.error(f"文本生成失败: {e}")
-            raise
+        # 提取生成的文本
+        if response and response.output:
+            generated_text = response.output.text
+            self.logger.debug(f"文本生成成功，长度: {len(generated_text)}")
+            return generated_text
+        else:
+            self.logger.error(f"文本生成失败: API响应格式错误")
+            raise ValueError("API响应格式错误")
 
     def _call_api(self, messages: List[Dict[str, str]], **kwargs) -> Any:
         """调用通义千问API
@@ -128,25 +125,17 @@ class LLMManager:
         # 重试机制
         max_retries = defaultConfig.llm.max_retries
         for attempt in range(max_retries + 1):
-            try:
-                response = Generation.call(**params)
-
-                if response.status_code == 200:
-                    return response
-                else:
-                    error_msg = f"API调用失败，状态码: {response.status_code}, 错误: {response.message}"
-                    if attempt == max_retries:
-                        raise Exception(error_msg)
-                    else:
-                        self.logger.warning(f"{error_msg}，正在重试 ({attempt + 1}/{max_retries})")
-                        time.sleep(2**attempt)  # 指数退避
-
-            except Exception as e:
+            self.logger.info(f"调用llm api的参数: {params}")
+            response = Generation.call(**params)
+            if response.status_code == 200:
+                return response
+            else:
+                error_msg = f"API调用失败，状态码: {response.status_code}, 错误: {response.message}"
                 if attempt == max_retries:
-                    raise
+                    raise Exception(error_msg)
                 else:
-                    self.logger.warning(f"API调用异常: {e}，正在重试 ({attempt + 1}/{max_retries})")
-                    time.sleep(2**attempt)
+                    self.logger.warning(f"{error_msg}，正在重试 ({attempt + 1}/{max_retries})")
+                    time.sleep(2**attempt)  # 指数退避
 
     @log_execution_time("llm_chat")
     def chat(self, message: str, system_prompt: Optional[str] = None, clear_history: bool = False) -> str:
@@ -177,7 +166,7 @@ class LLMManager:
 
             # 添加当前用户消息
             messages.append({"role": "user", "content": message})
-
+            self.logger.info(f"llm chat的输入消息: {messages}")
             # 调用API
             response = self._call_api(messages)
 
@@ -225,7 +214,7 @@ class LLMManager:
             params["stream"] = True
 
             full_response = ""
-
+            self.logger.info(f"llm stream chat的输入消息: {messages}")
             for response in Generation.call(**params):
                 if response.status_code == 200 and response.output:
                     chunk = response.output.text

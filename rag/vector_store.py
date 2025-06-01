@@ -16,18 +16,14 @@ from pathlib import Path
 import uuid
 
 # ChromaDB导入
-try:
-    import chromadb
-    from chromadb.config import Settings
-
-    CHROMA_AVAILABLE = True
-except ImportError:
-    CHROMA_AVAILABLE = False
+import chromadb
+from chromadb.config import Settings
 
 from langchain_core.documents import Document
 
 from config import defaultConfig
 from logger import get_logger, log_execution_time
+import embeddings
 
 
 class VectorStoreManager:
@@ -41,7 +37,7 @@ class VectorStoreManager:
         embedding_manager: 嵌入管理器
     """
 
-    def __init__(self, embedding_manager):
+    def __init__(self, embedding_manager: embeddings.EmbeddingManager):
         """初始化向量存储管理器
 
         Args:
@@ -49,16 +45,13 @@ class VectorStoreManager:
         """
         self.logger = get_logger("VectorStoreManager")
         self.embedding_manager = embedding_manager
-        self.client = None
-        self.collection = None
-
-        self._initialize_chromadb()
+        self.client : chromadb.Client
+        self.collection : chromadb.Collection
+        
+        self.client,self.collection = self._initialize_chromadb()
 
     def _initialize_chromadb(self) -> None:
         """初始化ChromaDB存储"""
-        if not CHROMA_AVAILABLE:
-            raise ImportError("ChromaDB未安装，请运行: pip install chromadb")
-
         try:
             self.logger.info("正在初始化ChromaDB存储")
 
@@ -67,15 +60,17 @@ class VectorStoreManager:
             persist_dir.mkdir(parents=True, exist_ok=True)
 
             # 初始化ChromaDB客户端
-            self.client = chromadb.PersistentClient(path=str(persist_dir), settings=Settings(anonymized_telemetry=False, allow_reset=True))
+            client = chromadb.PersistentClient(path=str(persist_dir), settings=Settings(anonymized_telemetry=False, allow_reset=True))
 
             # 获取或创建集合
-            self.collection = self.client.get_or_create_collection(
+            collection  = client.get_or_create_collection(
                 name=defaultConfig.vector_store.collection_name, metadata={"hnsw:space": "cosine"}  # 使用余弦相似度
             )
 
-            self.logger.info(f"ChromaDB初始化成功 | 集合: {defaultConfig.vector_store.collection_name} | " f"文档数量: {self.collection.count()}")
-
+            self.logger.info(f"ChromaDB初始化成功 | 集合: {defaultConfig.vector_store.collection_name} | " f"文档数量: {collection.count()}")
+            return   client, collection
+        
+        
         except Exception as e:
             self.logger.error(f"ChromaDB初始化失败: {e}")
             raise

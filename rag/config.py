@@ -19,7 +19,7 @@ class EmbeddingConfig(BaseModel):
     max_length: int = Field(default=512, description="最大文本长度")
     batch_size: int = Field(default=32, description="批处理大小")
     cache_dir: str = Field(default="/Users/liuqianli/.cache/huggingface/hub", description="模型缓存目录")
-    
+     
     class Config:
         extra = "forbid"
 
