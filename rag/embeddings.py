@@ -44,9 +44,12 @@ class EmbeddingManager(Embeddings):
         self.logger = get_logger("EmbeddingManager")
         self.model_name = model_name or defaultConfig.embedding.model_name
         self.device = get_device()
-        self.model, self.embedding_dim = self._load_model()
+        self.model: SentenceTransformer
+        self.embedding_dim: int
+        
+        self._load_model()
 
-    def _load_model(self) -> Tuple[SentenceTransformer, int]:
+    def _load_model(self) -> None:
         """加载嵌入模型
 
         数据流：模型下载/加载 -> 设备配置 -> 维度获取
@@ -61,9 +64,10 @@ class EmbeddingManager(Embeddings):
                 # 加载模型
                 model = SentenceTransformer(self.model_name, cache_folder=str(cache_dir), device=self.device, local_files_only=True)
                 # 获取嵌入维度
-                embedding_dim  = model.get_sentence_embedding_dimension()
+                embedding_dim = model.get_sentence_embedding_dimension()
                 self.logger.info(f"嵌入模型加载成功 | 模型: {self.model_name} | " f"设备: {self.device} | 维度: {embedding_dim}")
-                return model, embedding_dim
+                self.model = model
+                self.embedding_dim = embedding_dim
 
             except Exception as e:
                 self.logger.error(f"嵌入模型加载失败: {e}")

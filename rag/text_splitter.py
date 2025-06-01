@@ -32,6 +32,49 @@ class SplitResult:
     overlap_ratio: float
 
 
+class SemanticSplitter:
+    def __init__(self, chunk_size, chunk_overlap, **kwargs):
+        self.chunk_size = chunk_size
+        self.chunk_overlap = chunk_overlap
+        self.logger = get_logger("SemanticSplitter")
+
+    def split_text(self, text: str) -> List[str]:
+        """语义分割实现"""
+        # 首先按段落分割
+        paragraphs = re.split(r"\n\s*\n", text)
+
+        chunks = []
+        current_chunk = ""
+
+        for paragraph in paragraphs:
+            paragraph = paragraph.strip()
+            if not paragraph:
+                continue
+
+            # 如果当前段落加入后超过chunk_size，先保存当前chunk
+            if len(current_chunk) + len(paragraph) > self.chunk_size and current_chunk:
+                chunks.append(current_chunk.strip())
+
+                # 处理重叠
+                if self.chunk_overlap > 0:
+                    overlap_text = current_chunk[-self.chunk_overlap:]
+                    current_chunk = overlap_text + "\n" + paragraph
+                else:
+                    current_chunk = paragraph
+            else:
+                # 添加到当前chunk
+                if current_chunk:
+                    current_chunk += "\n\n" + paragraph
+                else:
+                    current_chunk = paragraph
+
+        # 添加最后一个chunk
+        if current_chunk.strip():
+            chunks.append(current_chunk.strip())
+
+        return chunks
+
+
 class TextSplitterManager:
     """文本分割管理器
 
@@ -159,7 +202,7 @@ class TextSplitterManager:
 
         elif strategy == "semantic":
             # 语义分割器（自定义实现）
-            return self._create_semantic_splitter(**params)
+            return SemanticSplitter(**params)
 
         else:
             raise ValueError(f"不支持的分割策略: {strategy}")
@@ -181,7 +224,8 @@ class TextSplitterManager:
             return self.code_separators
         else:  # mixed
             # 混合语言，合并中英文分割符
-            return self.chinese_separators + [sep for sep in self.english_separators if sep not in self.chinese_separators]
+            return self.chinese_separators + [sep for sep in self.english_separators if
+                                              sep not in self.chinese_separators]
 
     def _split_single_document(self, document: Document, splitter) -> List[Document]:
         """分割单个文档
@@ -220,56 +264,6 @@ class TextSplitterManager:
             self.logger.error(f"单文档分割失败: {e}")
             # 如果分割失败，返回原文档
             return [document]
-
-    def _create_semantic_splitter(self, **params):
-        """创建语义分割器
-
-        基于语义边界进行分割，保持语义完整性
-        """
-
-        class SemanticSplitter:
-            def __init__(self, chunk_size, chunk_overlap, **kwargs):
-                self.chunk_size = chunk_size
-                self.chunk_overlap = chunk_overlap
-                self.logger = get_logger("SemanticSplitter")
-
-            def split_text(self, text: str) -> List[str]:
-                """语义分割实现"""
-                # 首先按段落分割
-                paragraphs = re.split(r"\n\s*\n", text)
-
-                chunks = []
-                current_chunk = ""
-
-                for paragraph in paragraphs:
-                    paragraph = paragraph.strip()
-                    if not paragraph:
-                        continue
-
-                    # 如果当前段落加入后超过chunk_size，先保存当前chunk
-                    if len(current_chunk) + len(paragraph) > self.chunk_size and current_chunk:
-                        chunks.append(current_chunk.strip())
-
-                        # 处理重叠
-                        if self.chunk_overlap > 0:
-                            overlap_text = current_chunk[-self.chunk_overlap :]
-                            current_chunk = overlap_text + "\n" + paragraph
-                        else:
-                            current_chunk = paragraph
-                    else:
-                        # 添加到当前chunk
-                        if current_chunk:
-                            current_chunk += "\n\n" + paragraph
-                        else:
-                            current_chunk = paragraph
-
-                # 添加最后一个chunk
-                if current_chunk.strip():
-                    chunks.append(current_chunk.strip())
-
-                return chunks
-
-        return SemanticSplitter(**params)
 
     def analyze_text_structure(self, text: str) -> Dict[str, Any]:
         """分析文本结构

@@ -70,7 +70,7 @@ class RetrieverManager:
         top_k = top_k or defaultConfig.vector_store.top_k
 
         try:
-            self.logger.debug(f"开始检索: {query[:50]}... | top_k: {top_k}")
+            self.logger.info(f"开始检索: {query[:50]}... | top_k: {top_k}")
 
             # 使用向量存储进行相似度搜索
             results = self.vector_store.similarity_search(
