@@ -16,9 +16,9 @@
 from typing import List, Dict
 from dataclasses import dataclass
 import time
-import re
 
 from logger import get_logger
+from tokenizer import JiebaTokenizer
 
 
 @dataclass
@@ -45,16 +45,19 @@ class SimpleQueryExpander:
     
     def __init__(self, enable_expansion: bool = True):
         """初始化查询扩展器
-        
+
         Args:
             enable_expansion: 是否启用查询扩展
         """
         self.logger = get_logger("SimpleQueryExpander")
         self.enable_expansion = enable_expansion
-        
+
+        # 初始化JiebaTokenizer
+        self.tokenizer = JiebaTokenizer()
+
         # 手动维护的同义词词典 - 这是学习重点
         self.synonym_dict = self._build_synonym_dict()
-        
+
         self.logger.info(f"简单查询扩展器初始化完成，词典大小: {len(self.synonym_dict)}")
     
     def _build_synonym_dict(self) -> Dict[str, List[str]]:
@@ -123,13 +126,14 @@ class SimpleQueryExpander:
             )
         
         try:
-            # 简单分词（按空格和标点分割）
-            words = self._simple_tokenize(query)
-            
+            # 使用JiebaTokenizer进行分词
+            tokenize_result = self.tokenizer.tokenize(query, remove_stop_words=True)
+            words = tokenize_result.tokens
+
             # 查找同义词
             synonym_pairs = {}
             expansion_terms = []
-            
+
             for word in words:
                 if word in self.synonym_dict:
                     synonyms = self.synonym_dict[word][:max_synonyms_per_word]
@@ -152,14 +156,15 @@ class SimpleQueryExpander:
                 expansion_terms=expansion_terms,
                 synonym_pairs=synonym_pairs,
                 processing_time=processing_time,
-                method="manual_synonyms"
+                method="jieba_synonyms"
             )
-            
+
             self.logger.debug(
                 f"查询扩展完成 | 原始: '{query}' | "
-                f"扩展: '{expanded_query}' | 扩展词数: {len(expansion_terms)}"
+                f"扩展: '{expanded_query}' | 扩展词数: {len(expansion_terms)} | "
+                f"分词方法: jieba"
             )
-            
+
             return result
             
         except Exception as e:
@@ -173,23 +178,7 @@ class SimpleQueryExpander:
                 method="error"
             )
     
-    def _simple_tokenize(self, text: str) -> List[str]:
-        """简单分词
-        
-        使用正则表达式进行简单的中文分词
-        
-        Args:
-            text: 输入文本
-            
-        Returns:
-            分词结果
-        """
-        # 匹配中文词汇、英文单词、数字
-        pattern = r'[\u4e00-\u9fff]+|[a-zA-Z]+|[0-9]+'
-        tokens = re.findall(pattern, text)
-        
-        # 过滤长度小于2的词汇
-        return [token for token in tokens if len(token) >= 2]
+
     
     def _build_expanded_query(
         self, 

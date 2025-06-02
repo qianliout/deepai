@@ -26,11 +26,11 @@ from logger import get_logger
 @dataclass
 class TokenizeResult:
     """分词结果数据类"""
-    tokens: List[str]           # 分词结果
-    token_count: int           # 词汇数量
-    method: str                # 分词方法
-    processing_time: float     # 处理时间(秒)
-    filtered_count: int        # 过滤掉的词汇数量
+    tokens: List[str]  # 分词结果
+    token_count: int  # 词汇数量
+    method: str  # 分词方法
+    processing_time: float  # 处理时间(秒)
+    filtered_count: int  # 过滤掉的词汇数量
 
 
 class BaseTokenizer(ABC):
@@ -38,12 +38,12 @@ class BaseTokenizer(ABC):
     
     定义分词器的通用接口，用于学习不同分词策略的实现
     """
-    
+
     def __init__(self):
         """初始化分词器"""
         self.logger = get_logger(self.__class__.__name__)
         self.stop_words = self._load_stop_words()
-    
+
     @abstractmethod
     def tokenize(self, text: str, remove_stop_words: bool = True) -> TokenizeResult:
         """分词接口
@@ -56,7 +56,7 @@ class BaseTokenizer(ABC):
             分词结果
         """
         pass
-    
+
     def _load_stop_words(self) -> Set[str]:
         """加载停用词表"""
         # 基础中文停用词
@@ -85,7 +85,7 @@ class SimpleTokenizer(BaseTokenizer):
     2. 正则表达式在文本处理中的应用
     3. 简单分词的优缺点
     """
-    
+
     def __init__(self):
         """初始化简单分词器"""
         super().__init__()
@@ -103,19 +103,19 @@ class SimpleTokenizer(BaseTokenizer):
         """
         import time
         start_time = time.time()
-        
+
         try:
             # 使用正则表达式进行简单分词
             tokens = self._simple_tokenize(text)
-            
+
             # 过滤停用词
             original_count = len(tokens)
             if remove_stop_words:
                 tokens = [token for token in tokens if token not in self.stop_words]
-            
+
             processing_time = time.time() - start_time
             filtered_count = original_count - len(tokens)
-            
+
             result = TokenizeResult(
                 tokens=tokens,
                 token_count=len(tokens),
@@ -123,14 +123,14 @@ class SimpleTokenizer(BaseTokenizer):
                 processing_time=processing_time,
                 filtered_count=filtered_count
             )
-            
+
             self.logger.debug(
                 f"简单分词完成 | 原始词数: {original_count} | "
                 f"过滤后: {len(tokens)} | 耗时: {processing_time:.4f}s"
             )
-            
+
             return result
-            
+
         except Exception as e:
             self.logger.error(f"简单分词失败: {e}")
             return TokenizeResult(
@@ -140,7 +140,7 @@ class SimpleTokenizer(BaseTokenizer):
                 processing_time=time.time() - start_time,
                 filtered_count=0
             )
-    
+
     def _simple_tokenize(self, text: str) -> List[str]:
         """简单分词实现
         
@@ -148,12 +148,12 @@ class SimpleTokenizer(BaseTokenizer):
         """
         # 清理文本
         text = text.strip()
-        
+
         # 使用正则表达式分词
         # 匹配中文词汇、英文单词、数字
         pattern = r'[\u4e00-\u9fff]+|[a-zA-Z]+|[0-9]+(?:\.[0-9]+)?'
         tokens = re.findall(pattern, text)
-        
+
         # 进一步处理中文词汇（简单的基于长度的分割）
         processed_tokens = []
         for token in tokens:
@@ -163,16 +163,16 @@ class SimpleTokenizer(BaseTokenizer):
                     # 尝试按2-3字符分割
                     for i in range(0, len(token), 2):
                         if i + 2 <= len(token):
-                            processed_tokens.append(token[i:i+2])
+                            processed_tokens.append(token[i:i + 2])
                         elif i < len(token):
                             processed_tokens.append(token[i:])
                 else:
                     processed_tokens.append(token)
             else:
                 processed_tokens.append(token)
-        
+
         return [token for token in processed_tokens if len(token.strip()) > 0]
-    
+
     def _is_chinese(self, text: str) -> bool:
         """判断文本是否包含中文字符"""
         return bool(re.search(r'[\u4e00-\u9fff]', text))
@@ -188,29 +188,29 @@ class JiebaTokenizer(BaseTokenizer):
     2. HMM和CRF在中文分词中的应用
     3. 词典和统计相结合的分词策略
     """
-    
+
     def __init__(self):
         """初始化jieba分词器"""
         super().__init__()
-        
+
         # 初始化jieba
         self._init_jieba()
         self.logger.info("Jieba分词器初始化完成")
-    
+
     def _init_jieba(self):
         """初始化jieba分词器"""
         try:
             # 设置jieba日志级别
             jieba.setLogLevel(20)  # INFO级别
-            
+
             # 预加载词典
             jieba.initialize()
-            
+
             self.logger.info("jieba分词器初始化完成")
         except Exception as e:
             self.logger.error(f"jieba初始化失败: {e}")
             raise
-    
+
     def tokenize(self, text: str, remove_stop_words: bool = True) -> TokenizeResult:
         """jieba分词实现
         
@@ -223,19 +223,19 @@ class JiebaTokenizer(BaseTokenizer):
         """
         import time
         start_time = time.time()
-        
+
         try:
             # 使用jieba进行分词
             tokens = self._jieba_tokenize(text)
-            
+
             # 过滤停用词
             original_count = len(tokens)
             if remove_stop_words:
                 tokens = [token for token in tokens if token not in self.stop_words]
-            
+
             processing_time = time.time() - start_time
             filtered_count = original_count - len(tokens)
-            
+
             result = TokenizeResult(
                 tokens=tokens,
                 token_count=len(tokens),
@@ -243,14 +243,14 @@ class JiebaTokenizer(BaseTokenizer):
                 processing_time=processing_time,
                 filtered_count=filtered_count
             )
-            
+
             self.logger.debug(
                 f"jieba分词完成 | 原始词数: {original_count} | "
                 f"过滤后: {len(tokens)} | 耗时: {processing_time:.4f}s"
             )
-            
+
             return result
-            
+
         except Exception as e:
             self.logger.error(f"jieba分词失败: {e}")
             return TokenizeResult(
@@ -260,26 +260,26 @@ class JiebaTokenizer(BaseTokenizer):
                 processing_time=time.time() - start_time,
                 filtered_count=0
             )
-    
+
     def _jieba_tokenize(self, text: str) -> List[str]:
         """jieba分词实现"""
         try:
             # 使用jieba精确模式分词
             tokens = list(jieba.cut(text, cut_all=False))
-            
+
             # 过滤空白和单字符标点
             filtered_tokens = []
             for token in tokens:
                 token = token.strip()
                 if len(token) > 0 and not (len(token) == 1 and not token.isalnum()):
                     filtered_tokens.append(token)
-            
+
             return filtered_tokens
-            
+
         except Exception as e:
             self.logger.error(f"jieba分词失败: {e}")
             return []
-    
+
     def add_user_dict(self, words: List[str]):
         """添加用户自定义词典
         

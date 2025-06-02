@@ -84,5 +84,6 @@ rag代码中还是有足的地方
 
 
 对于rag项目请继续改代码
-    - 每一次对话保存到redis
-    -  
+    - langchain 保留历史对话，并且每一次对话保存到redis
+    - query_expander.py中不使用_simple_tokenize，使用JiebaTokenizer 
+    - 在程序运行之前，先执行检查工作，检查配置，redis等等(check.py中写了一些检查工作，如不正确请修正)

@@ -97,17 +97,31 @@ class PathConfig(BaseModel):
 
 class LoggingConfig(BaseModel):
     """日志配置"""
-    
+
     log_level: str = Field(default="INFO", description="日志级别")
     log_format: str = Field(
         default="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         description="日志格式"
     )
-    
+
     class Config:
         extra = "forbid"
 
 
+class RedisConfig(BaseModel):
+    """Redis配置"""
+
+    host: str = Field(default="localhost", description="Redis主机地址")
+    port: int = Field(default=6379, description="Redis端口")
+    db: int = Field(default=0, description="Redis数据库编号")
+    password: str = Field(default="", description="Redis密码")
+    decode_responses: bool = Field(default=True, description="是否解码响应")
+    socket_timeout: int = Field(default=5, description="连接超时时间")
+    session_expire: int = Field(default=3600, description="会话过期时间(秒)")
+    key_prefix: str = Field(default="rag:session:", description="会话键前缀")
+
+    class Config:
+        extra = "forbid"
 
 
 
@@ -219,6 +233,7 @@ class Config(BaseModel):
     tokenizer: TokenizerConfig = Field(default_factory=TokenizerConfig)
     path: PathConfig = Field(default_factory=PathConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
+    redis: RedisConfig = Field(default_factory=RedisConfig)
 
 # 默认配置实例
 defaultConfig = Config()
