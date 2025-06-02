@@ -150,7 +150,7 @@ class MySQLConfig(BaseModel):
     port: int = Field(default=3306, description="MySQL端口")
     username: str = Field(default="root", description="MySQL用户名")
     password: str = Field(default="", description="MySQL密码")
-    database: str = Field(default="rag", description="数据库名称")
+    database: str = Field(default="rag_system", description="数据库名称")
     charset: str = Field(default="utf8mb4", description="字符集")
     autocommit: bool = Field(default=True, description="是否自动提交")
     pool_size: int = Field(default=10, description="连接池大小")
