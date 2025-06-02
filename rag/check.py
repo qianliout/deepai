@@ -100,6 +100,10 @@ class SystemChecker:
             "pydantic": "数据验证",
             "numpy": "数值计算",
             "torch": "PyTorch深度学习框架",
+            "elasticsearch": "Elasticsearch搜索引擎",
+            "pymysql": "MySQL数据库客户端",
+            "sqlalchemy": "SQL工具包",
+            "transformers": "Transformers模型库",
         }
 
         missing_packages = []
@@ -128,21 +132,21 @@ class SystemChecker:
 
         try:
             # 检查配置对象是否正常
-            config_dict = config.model_dump()
+            config_dict = defaultConfig.model_dump()
 
             # 检查关键配置项
             issues = []
 
             # 检查API密钥
-            if not config.llm.api_key:
+            if not defaultConfig.llm.api_key:
                 issues.append("通义百炼API密钥未设置")
 
             # 检查目录配置
-            if not config.data_dir:
+            if not defaultConfig.path.data_dir:
                 issues.append("数据目录未配置")
 
             # 检查嵌入模型配置
-            if not config.embedding.model_name:
+            if not defaultConfig.embedding.model_name:
                 issues.append("嵌入模型名称未配置")
 
             if issues:
@@ -160,11 +164,11 @@ class SystemChecker:
         self.logger.info("📁 检查目录权限...")
 
         directories = [
-            config.data_dir,
-            config.documents_dir,
-            config.logging.log_dir,
-            config.chromadb.persist_directory,
-            config.embedding.cache_dir,
+            defaultConfig.path.data_dir,
+            defaultConfig.path.documents_dir,
+            defaultConfig.path.log_dir,
+            defaultConfig.vector_store.persist_directory,
+            defaultConfig.embedding.cache_dir,
         ]
 
         issues = []
@@ -195,20 +199,20 @@ class SystemChecker:
         self.logger.info("🌐 检查API连接...")
 
         # 检查通义百炼API
-        if config.llm.api_key:
+        if defaultConfig.llm.api_key:
             try:
                 import dashscope
 
-                dashscope.api_key = config.llm.api_key
+                dashscope.api_key = defaultConfig.llm.api_key
 
                 # 尝试调用API
                 response = dashscope.Generation.call(
-                    model=config.llm.model_name, messages=[{"role": "user", "content": "测试连接"}], max_tokens=10
+                    model=defaultConfig.llm.model_name, messages=[{"role": "user", "content": "测试连接"}], max_tokens=10
                 )
 
                 if response.status_code == 200:
                     self._add_result(
-                        "通义百炼API检查", "success", "API连接正常", {"model": config.llm.model_name, "status_code": response.status_code}
+                        "通义百炼API检查", "success", "API连接正常", {"model": defaultConfig.llm.model_name, "status_code": response.status_code}
                     )
                 else:
                     self._add_result(
@@ -232,19 +236,25 @@ class SystemChecker:
             import redis
 
             r = redis.Redis(
-                host=config.redis.host, port=config.redis.port, password=config.redis.password or None, db=config.redis.db, socket_timeout=5
+                host=defaultConfig.redis.host,
+                port=defaultConfig.redis.port,
+                password=defaultConfig.redis.password or None,
+                db=defaultConfig.redis.db,
+                socket_timeout=5
             )
 
             # 测试连接
             r.ping()
 
             self._add_result(
-                "Redis连接检查", "success", "Redis连接正常", {"host": config.redis.host, "port": config.redis.port, "db": config.redis.db}
+                "Redis连接检查", "success", "Redis连接正常",
+                {"host": defaultConfig.redis.host, "port": defaultConfig.redis.port, "db": defaultConfig.redis.db}
             )
 
         except Exception as e:
             self._add_result(
-                "Redis连接检查", "warning", f"Redis连接失败: {e}", {"error": str(e), "host": config.redis.host, "port": config.redis.port}
+                "Redis连接检查", "warning", f"Redis连接失败: {e}",
+                {"error": str(e), "host": defaultConfig.redis.host, "port": defaultConfig.redis.port}
             )
 
         # 检查ChromaDB
@@ -252,16 +262,104 @@ class SystemChecker:
             import chromadb
             from chromadb.config import Settings
 
-            client = chromadb.PersistentClient(path=config.chromadb.persist_directory, settings=Settings(anonymized_telemetry=False))
+            client = chromadb.PersistentClient(
+                path=defaultConfig.vector_store.persist_directory,
+                settings=Settings(anonymized_telemetry=False)
+            )
 
             # 测试创建集合
             test_collection = client.get_or_create_collection("test_connection")
             client.delete_collection("test_connection")
 
-            self._add_result("ChromaDB检查", "success", "ChromaDB连接正常", {"persist_directory": config.chromadb.persist_directory})
+            self._add_result(
+                "ChromaDB检查", "success", "ChromaDB连接正常",
+                {"persist_directory": defaultConfig.vector_store.persist_directory}
+            )
 
         except Exception as e:
             self._add_result("ChromaDB检查", "error", f"ChromaDB连接失败: {e}", {"error": str(e)})
+
+        # 检查Elasticsearch连接
+        try:
+            from elasticsearch import Elasticsearch
+
+            es_config = defaultConfig.elasticsearch
+            es_client = Elasticsearch(
+                [{"host": es_config.host, "port": es_config.port}],
+                http_auth=(es_config.username, es_config.password) if es_config.username else None,
+                use_ssl=es_config.use_ssl,
+                verify_certs=es_config.verify_certs,
+                timeout=es_config.timeout
+            )
+
+            # 测试连接
+            if es_client.ping():
+                cluster_info = es_client.info()
+                self._add_result(
+                    "Elasticsearch检查", "success", "ES连接正常",
+                    {
+                        "host": es_config.host,
+                        "port": es_config.port,
+                        "version": cluster_info.get("version", {}).get("number", "unknown"),
+                        "cluster_name": cluster_info.get("cluster_name", "unknown")
+                    }
+                )
+            else:
+                self._add_result(
+                    "Elasticsearch检查", "error", "ES连接失败: ping失败",
+                    {"host": es_config.host, "port": es_config.port}
+                )
+
+        except Exception as e:
+            self._add_result(
+                "Elasticsearch检查", "warning", f"ES连接失败: {e}",
+                {"error": str(e), "host": defaultConfig.elasticsearch.host, "port": defaultConfig.elasticsearch.port}
+            )
+
+        # 检查MySQL连接
+        try:
+            import pymysql
+            from sqlalchemy import create_engine, text
+
+            mysql_config = defaultConfig.mysql
+            connection_url = (
+                f"mysql+pymysql://{mysql_config.username}:{mysql_config.password}@"
+                f"{mysql_config.host}:{mysql_config.port}/{mysql_config.database}"
+                f"?charset={mysql_config.charset}"
+            )
+
+            engine = create_engine(
+                connection_url,
+                pool_size=mysql_config.pool_size,
+                max_overflow=mysql_config.max_overflow,
+                pool_timeout=mysql_config.pool_timeout
+            )
+
+            # 测试连接
+            with engine.connect() as conn:
+                result = conn.execute(text("SELECT VERSION()"))
+                version = result.fetchone()[0]
+
+            self._add_result(
+                "MySQL检查", "success", "MySQL连接正常",
+                {
+                    "host": mysql_config.host,
+                    "port": mysql_config.port,
+                    "database": mysql_config.database,
+                    "version": version
+                }
+            )
+
+        except Exception as e:
+            self._add_result(
+                "MySQL检查", "warning", f"MySQL连接失败: {e}",
+                {
+                    "error": str(e),
+                    "host": defaultConfig.mysql.host,
+                    "port": defaultConfig.mysql.port,
+                    "database": defaultConfig.mysql.database
+                }
+            )
 
     def _check_model_availability(self):
         """检查模型可用性"""
@@ -270,8 +368,12 @@ class SystemChecker:
         # 检查嵌入模型
         try:
             from sentence_transformers import SentenceTransformer
+            from config import get_device
 
-            model = SentenceTransformer(config.embedding.model_name, cache_folder=config.embedding.cache_dir)
+            model = SentenceTransformer(
+                defaultConfig.embedding.model_name,
+                cache_folder=defaultConfig.embedding.cache_dir
+            )
 
             # 测试嵌入
             test_embedding = model.encode(["测试文本"])
@@ -279,13 +381,18 @@ class SystemChecker:
             self._add_result(
                 "嵌入模型检查",
                 "success",
-                f"模型 {config.embedding.model_name} 可用",
-                {"model_name": config.embedding.model_name, "embedding_dim": len(test_embedding[0]), "device": config.get_device()},
+                f"模型 {defaultConfig.embedding.model_name} 可用",
+                {
+                    "model_name": defaultConfig.embedding.model_name,
+                    "embedding_dim": len(test_embedding[0]),
+                    "device": get_device()
+                },
             )
 
         except Exception as e:
             self._add_result(
-                "嵌入模型检查", "error", f"嵌入模型加载失败: {e}", {"error": str(e), "model_name": config.embedding.model_name}
+                "嵌入模型检查", "error", f"嵌入模型加载失败: {e}",
+                {"error": str(e), "model_name": defaultConfig.embedding.model_name}
             )
 
     def _check_system_resources(self):
@@ -386,6 +493,51 @@ class SystemChecker:
                     print(f"   - {issue}")
 
         print("\n" + "=" * 60)
+
+    def run_full_check(self) -> Dict[str, Any]:
+        """运行完整的系统检查
+
+        Returns:
+            检查结果字典
+        """
+        start_time = time.time()
+
+        # 清空之前的结果
+        self.results = []
+
+        # 执行所有检查
+        self._check_dependencies()
+        self._check_configuration()
+        self._check_directories()
+        self._check_api_connections()
+        self._check_database_connections()
+        self._check_model_availability()
+        self._check_system_resources()
+
+        # 生成报告
+        total_duration = time.time() - start_time
+        report = self._generate_report(total_duration)
+
+        # 返回结果字典
+        return {
+            "summary": {
+                "total": report.total_checks,
+                "success": report.success_count,
+                "warning": report.warning_count,
+                "error": report.error_count,
+                "overall_status": report.overall_status,
+                "duration": report.total_duration
+            },
+            "results": [
+                {
+                    "check_name": result.name,
+                    "status": result.status,
+                    "message": result.message,
+                    "details": result.details
+                }
+                for result in report.results
+            ]
+        }
 
 
 def test_imports():

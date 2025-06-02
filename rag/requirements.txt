@@ -37,3 +37,5 @@ click>=8.1.0
 
 # 开发工具
 pytest>=7.4.0
+
+elasticsearch>=8.18.2

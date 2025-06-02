@@ -86,4 +86,10 @@ rag代码中还是有足的地方
 对于rag项目请继续改代码
     - langchain 保留历史对话，并且每一次对话保存到redis
     - query_expander.py中不使用_simple_tokenize，使用JiebaTokenizer 
-    - 在程序运行之前，先执行检查工作，检查配置，redis等等(check.py中写了一些检查工作，如不正确请修正)
+    
+    - 在程序运行之前，先执行检查工作，检查配置，redis等等(check.py中写了一些检查的代码，如不正确请修正，如不全则添加)
+    - 把文档数据解析保存到es中
+    - 把对话数据全保存到mysql中
+    - 对话的上下文保留到redis中,redis数据中的context_window中保存的数据通过动态上下文压缩技术减少token占用（可以使用transformers的summarization）
+    - 回答用户问题时，先去es里通过关键词检索出相关文档，再去向量数据库中进行精排 
+
