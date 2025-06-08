@@ -350,6 +350,24 @@ class Trainer:
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"模型文件不存在: {model_path}")
 
+        # 先加载词汇表以获取正确的词汇表大小
+        vocab_path = TRAINING_CONFIG.pretrain_vocab_dir
+        en_vocab_file = os.path.join(vocab_path, "en_vocab.json")
+        it_vocab_file = os.path.join(vocab_path, "it_vocab.json")
+
+        if os.path.exists(en_vocab_file) and os.path.exists(it_vocab_file):
+            self.logger.info("加载词汇表...")
+            self.data_manager.tokenizer.load_vocabs(vocab_path)
+
+            # 更新配置中的词汇表大小
+            MODEL_CONFIG.vocab_size_en = len(self.data_manager.tokenizer.vocab_en)
+            MODEL_CONFIG.vocab_size_it = len(self.data_manager.tokenizer.vocab_it)
+
+            self.logger.info(f"英语词汇表大小: {MODEL_CONFIG.vocab_size_en}")
+            self.logger.info(f"意大利语词汇表大小: {MODEL_CONFIG.vocab_size_it}")
+        else:
+            self.logger.warning("未找到词汇表文件，使用默认配置")
+
         # 如果模型还没有初始化，先初始化
         if self.model is None:
             self.setup_model()
