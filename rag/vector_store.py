@@ -60,8 +60,7 @@ class VectorStoreManager:
             persist_dir.mkdir(parents=True, exist_ok=True)
 
             # 初始化ChromaDB客户端
-            client = chromadb.PersistentClient(path=str(persist_dir),
-                                               settings=Settings(anonymized_telemetry=False, allow_reset=True))
+            client = chromadb.PersistentClient(path=str(persist_dir), settings=Settings(anonymized_telemetry=False, allow_reset=True))
 
             # 获取或创建集合
             collection = client.get_or_create_collection(
@@ -69,11 +68,11 @@ class VectorStoreManager:
             )
 
             self.logger.info(
-                f"ChromaDB初始化成功 | 集合: {defaultConfig.vector_store.collection_name} | " f"文档数量: {collection.count()}")
+                f"ChromaDB初始化成功 | 集合: {defaultConfig.vector_store.collection_name} | " f"文档数量: {collection.count()}"
+            )
 
             self.client = client
             self.collection = collection
-
 
         except Exception as e:
             self.logger.error(f"ChromaDB初始化失败: {e}")
@@ -119,8 +118,7 @@ class VectorStoreManager:
             raise
 
     @log_execution_time("similarity_search")
-    def similarity_search(self, query: str, k: int = None, score_threshold: float = None) -> List[
-        Tuple[Document, float]]:
+    def similarity_search(self, query: str, k: int = None, score_threshold: float = None) -> List[Tuple[Document, float]]:
         """相似度搜索
 
         Args:
@@ -193,8 +191,9 @@ class VectorStoreManager:
             self.client.delete_collection(defaultConfig.vector_store.collection_name)
 
             # 重新创建集合
-            self.collection = self.client.get_or_create_collection(name=defaultConfig.vector_store.collection_name,
-                                                                   metadata={"hnsw:space": "cosine"})
+            self.collection = self.client.get_or_create_collection(
+                name=defaultConfig.vector_store.collection_name, metadata={"hnsw:space": "cosine"}
+            )
 
             self.logger.info("ChromaDB向量存储已清空")
 
@@ -215,8 +214,7 @@ class VectorStoreManager:
             self.logger.error(f"删除文档失败: {e}")
             raise
 
-    def update_documents(self, doc_ids: List[str], documents: List[Document],
-                         embeddings: Optional[List[List[float]]] = None) -> None:
+    def update_documents(self, doc_ids: List[str], documents: List[Document], embeddings: Optional[List[List[float]]] = None) -> None:
         """更新指定文档
 
         Args:

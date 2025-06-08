@@ -17,10 +17,11 @@ from session_manager import RedisSessionManager
 from context_manager import ContextManager
 from mysql_manager import MySQLManager, ConversationData
 
+
 @dataclass
 class RAGResponse:
     """RAG响应数据结构"""
-    
+
     answer: str
     sources: List[str]
     retrieval_time: float
@@ -94,14 +95,18 @@ class RAGChain:
             # 将Redis消息转换为LLM历史格式
             self.llm.clear_history()
             for message in messages:
-                if message.role in ['user', 'assistant']:
+                if message.role in ["user", "assistant"]:
                     self.llm.chat_history.append(
-                        type('ChatMessage', (), {
-                            'role': message.role,
-                            'content': message.content,
-                            'timestamp': message.timestamp,
-                            'to_dict': lambda: {'role': message.role, 'content': message.content}
-                        })()
+                        type(
+                            "ChatMessage",
+                            (),
+                            {
+                                "role": message.role,
+                                "content": message.content,
+                                "timestamp": message.timestamp,
+                                "to_dict": lambda: {"role": message.role, "content": message.content},
+                            },
+                        )()
                     )
 
             self.logger.info(f"加载会话历史: {len(messages)} 条消息")
@@ -126,19 +131,14 @@ class RAGChain:
             self.context_manager.add_message(self.session_id, role, content)
 
             # 3. 保存到MySQL（持久化存储）
-            conversation_data = ConversationData(
-                session_id=self.session_id,
-                role=role,
-                content=content,
-                processing_time=processing_time
-            )
+            conversation_data = ConversationData(session_id=self.session_id, role=role, content=content, processing_time=processing_time)
             self.mysql_manager.save_conversation(conversation_data)
 
             self.logger.debug(f"消息已保存到所有存储系统: {role}")
 
         except Exception as e:
             self.logger.error(f"保存消息到会话失败: {e}")
-    
+
     @log_execution_time("rag_query")
     def query(self, question: str, top_k: int = 5, save_to_session: bool = True) -> str:
         """单次查询
@@ -177,10 +177,7 @@ class RAGChain:
             context = "\n\n".join(context_docs)
 
             # 3. 获取压缩的对话历史作为上下文
-            context_messages = self.context_manager.get_context_messages(
-                self.session_id,
-                max_tokens=2000  # 限制上下文长度
-            )
+            context_messages = self.context_manager.get_context_messages(self.session_id, max_tokens=2000)  # 限制上下文长度
 
             # 4. 构建提示词（包含历史上下文）
             prompt = self._build_prompt_with_context(question, context, context_messages)
@@ -219,7 +216,7 @@ class RAGChain:
             if save_to_session:
                 self._save_to_session("assistant", error_msg, processing_time)
             return error_msg
-    
+
     def stream_chat(self, question: str, top_k: int = 5, save_to_session: bool = True) -> Generator[str, None, None]:
         """流式对话
 
@@ -270,14 +267,14 @@ class RAGChain:
             if save_to_session:
                 self._save_to_session("assistant", error_msg)
             yield error_msg
-    
+
     def _build_prompt(self, question: str, context: str) -> str:
         """构建提示词
-        
+
         Args:
             question: 用户问题
             context: 检索到的上下文
-            
+
         Returns:
             构建好的提示词
         """
@@ -289,15 +286,10 @@ class RAGChain:
 用户问题：{question}
 
 请基于上下文信息给出准确、有用的回答："""
-        
+
         return prompt
 
-    def _build_prompt_with_context(
-        self,
-        question: str,
-        context: str,
-        context_messages: List[Any]
-    ) -> str:
+    def _build_prompt_with_context(self, question: str, context: str, context_messages: List[Any]) -> str:
         """构建包含历史上下文的提示词
 
         Args:
@@ -336,7 +328,7 @@ class RAGChain:
 回答:"""
 
         return prompt
-    
+
     def clear_history(self):
         """清空对话历史"""
         try:
@@ -413,10 +405,10 @@ class RAGChain:
         except Exception as e:
             self.logger.error(f"列出会话失败: {e}")
             return []
-    
+
     def add_documents(self, documents):
         """添加文档到知识库
-        
+
         Args:
             documents: 文档列表
         """
@@ -426,7 +418,7 @@ class RAGChain:
         except Exception as e:
             self.logger.error(f"添加文档失败: {e}")
             raise
-    
+
     def get_stats(self) -> dict:
         """获取RAG系统统计信息"""
         try:
@@ -447,14 +439,14 @@ class RAGChain:
                 "system_info": {
                     "current_session_id": self.session_id,
                     "llm_model": defaultConfig.llm.model_name,
-                    "hybrid_retrieval": retrieval_stats.get("hybrid_mode", False)
+                    "hybrid_retrieval": retrieval_stats.get("hybrid_mode", False),
                 },
                 "vector_store": vector_stats,
                 "retrieval": retrieval_stats,
                 "redis_connection": redis_info,
                 "mysql_connection": mysql_info,
                 "context_management": context_stats,
-                "conversation_stats": conversation_stats
+                "conversation_stats": conversation_stats,
             }
 
             if session_info:
@@ -465,7 +457,7 @@ class RAGChain:
                 "redis": redis_info.get("connected", False),
                 "mysql": mysql_info.get("connected", False),
                 "vector_store": vector_stats.get("collection_exists", False),
-                "elasticsearch": retrieval_stats.get("elasticsearch_info", {}).get("connected", False)
+                "elasticsearch": retrieval_stats.get("elasticsearch_info", {}).get("connected", False),
             }
             stats["storage_health"] = storage_health
 

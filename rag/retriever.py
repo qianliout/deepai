@@ -27,13 +27,7 @@ from config import defaultConfig
 from query_expander import SimpleQueryExpander
 
 # 尝试导入ES管理器，如果失败则使用向量检索
-try:
-    from elasticsearch_manager import ElasticsearchManager, SearchResult
-    ES_AVAILABLE = True
-except ImportError:
-    print("⚠️  Elasticsearch管理器不可用，使用纯向量检索")
-    ES_AVAILABLE = False
-
+from elasticsearch_manager import ElasticsearchManager, SearchResult
 
 @dataclass
 class RetrievalResult:
@@ -77,19 +71,14 @@ class HybridRetrieverManager:
         self.query_expander = SimpleQueryExpander(enable_expansion=True)
 
         # 初始化ES管理器（如果可用）
-        if ES_AVAILABLE:
-            try:
-                self.es_manager = ElasticsearchManager()
-                self.hybrid_mode = True
-                self.logger.info("混合检索模式已启用 (ES + Vector)")
-            except Exception as e:
-                self.logger.warning(f"ES管理器初始化失败，使用纯向量检索: {e}")
-                self.es_manager = None
-                self.hybrid_mode = False
-        else:
+        try:
+            self.es_manager = ElasticsearchManager()
+            self.hybrid_mode = True
+            self.logger.info("混合检索模式已启用 (ES + Vector)")
+        except Exception as e:
+            self.logger.warning(f"ES管理器初始化失败，使用纯向量检索: {e}")
             self.es_manager = None
             self.hybrid_mode = False
-            self.logger.info("纯向量检索模式")
 
         self.logger.info("混合检索器管理器初始化完成")
 
@@ -108,12 +97,7 @@ class HybridRetrieverManager:
         return [result.document for result in results]
 
     def retrieve(
-        self,
-        query: str,
-        top_k: Optional[int] = None,
-        es_candidates: int = 50,
-        use_query_expansion: bool = True,
-        **kwargs
+        self, query: str, top_k: Optional[int] = None, es_candidates: int = 50, use_query_expansion: bool = True, **kwargs
     ) -> List[RetrievalResult]:
         """执行混合检索
 
@@ -143,14 +127,7 @@ class HybridRetrieverManager:
             self.logger.error(f"检索失败: {e}")
             return []
 
-    def _hybrid_retrieve(
-        self,
-        query: str,
-        top_k: int,
-        es_candidates: int,
-        use_query_expansion: bool,
-        **kwargs
-    ) -> List[RetrievalResult]:
+    def _hybrid_retrieve(self, query: str, top_k: int, es_candidates: int, use_query_expansion: bool, **kwargs) -> List[RetrievalResult]:
         """混合检索：ES粗排 + 向量精排
 
         Args:
@@ -174,10 +151,7 @@ class HybridRetrieverManager:
 
         # 2. ES粗排：关键词检索
         es_start = time.time()
-        es_results = self.es_manager.search_documents(
-            expanded_query,
-            size=es_candidates
-        )
+        es_results = self.es_manager.search_documents(expanded_query, size=es_candidates)
         es_time = time.time() - es_start
 
         if not es_results:
@@ -200,13 +174,7 @@ class HybridRetrieverManager:
 
         return reranked_results
 
-    def _vector_only_retrieve(
-        self,
-        query: str,
-        top_k: int,
-        use_query_expansion: bool,
-        **kwargs
-    ) -> List[RetrievalResult]:
+    def _vector_only_retrieve(self, query: str, top_k: int, use_query_expansion: bool, **kwargs) -> List[RetrievalResult]:
         """纯向量检索
 
         Args:
@@ -227,33 +195,20 @@ class HybridRetrieverManager:
 
         # 向量相似度搜索
         results = self.vector_store.similarity_search(
-            search_query,
-            k=top_k,
-            score_threshold=kwargs.get("score_threshold", defaultConfig.vector_store.score_threshold)
+            search_query, k=top_k, score_threshold=kwargs.get("score_threshold", defaultConfig.vector_store.score_threshold)
         )
 
         # 转换为RetrievalResult格式
         retrieval_results = []
         for i, (doc, score) in enumerate(results):
             retrieval_results.append(
-                RetrievalResult(
-                    document=doc,
-                    score=score,
-                    retrieval_method="vector_only",
-                    rank=i + 1,
-                    vector_score=score
-                )
+                RetrievalResult(document=doc, score=score, retrieval_method="vector_only", rank=i + 1, vector_score=score)
             )
 
         self.logger.debug(f"纯向量检索完成，返回 {len(retrieval_results)} 个结果")
         return retrieval_results
 
-    def _vector_rerank(
-        self,
-        query: str,
-        es_results: List[SearchResult],
-        top_k: int
-    ) -> List[RetrievalResult]:
+    def _vector_rerank(self, query: str, es_results: List[SearchResult], top_k: int) -> List[RetrievalResult]:
         """向量重排序ES结果
 
         Args:
@@ -281,11 +236,7 @@ class HybridRetrieverManager:
                     # 创建Document对象
                     document = Document(
                         page_content=es_result.content,
-                        metadata={
-                            "title": es_result.title,
-                            "doc_id": es_result.doc_id,
-                            **es_result.metadata
-                        }
+                        metadata={"title": es_result.title, "doc_id": es_result.doc_id, **es_result.metadata},
                     )
 
                     # 计算组合分数 (ES分数 + 向量分数的加权平均)
@@ -293,16 +244,18 @@ class HybridRetrieverManager:
                     vector_weight = 0.7
                     combined_score = es_weight * es_result.score + vector_weight * vector_score
 
-                    rerank_candidates.append(RetrievalResult(
-                        document=document,
-                        score=combined_score,
-                        retrieval_method="hybrid",
-                        rank=0,  # 将在排序后设置
-                        es_score=es_result.score,
-                        vector_score=vector_score,
-                        combined_score=combined_score,
-                        highlights=es_result.highlights
-                    ))
+                    rerank_candidates.append(
+                        RetrievalResult(
+                            document=document,
+                            score=combined_score,
+                            retrieval_method="hybrid",
+                            rank=0,  # 将在排序后设置
+                            es_score=es_result.score,
+                            vector_score=vector_score,
+                            combined_score=combined_score,
+                            highlights=es_result.highlights,
+                        )
+                    )
 
                 except Exception as e:
                     self.logger.warning(f"向量重排序单个文档失败: {e}")
@@ -354,11 +307,7 @@ class HybridRetrieverManager:
             self.logger.error(f"余弦相似度计算失败: {e}")
             return 0.0
 
-    def _fallback_es_results(
-        self,
-        es_results: List[SearchResult],
-        top_k: int
-    ) -> List[RetrievalResult]:
+    def _fallback_es_results(self, es_results: List[SearchResult], top_k: int) -> List[RetrievalResult]:
         """回退方案：直接使用ES结果
 
         Args:
@@ -371,22 +320,19 @@ class HybridRetrieverManager:
         results = []
         for i, es_result in enumerate(es_results[:top_k]):
             document = Document(
-                page_content=es_result.content,
-                metadata={
-                    "title": es_result.title,
-                    "doc_id": es_result.doc_id,
-                    **es_result.metadata
-                }
+                page_content=es_result.content, metadata={"title": es_result.title, "doc_id": es_result.doc_id, **es_result.metadata}
             )
 
-            results.append(RetrievalResult(
-                document=document,
-                score=es_result.score,
-                retrieval_method="es_only",
-                rank=i + 1,
-                es_score=es_result.score,
-                highlights=es_result.highlights
-            ))
+            results.append(
+                RetrievalResult(
+                    document=document,
+                    score=es_result.score,
+                    retrieval_method="es_only",
+                    rank=i + 1,
+                    es_score=es_result.score,
+                    highlights=es_result.highlights,
+                )
+            )
 
         return results
 
@@ -400,7 +346,7 @@ class HybridRetrieverManager:
             "top_k": defaultConfig.vector_store.top_k,
             "score_threshold": defaultConfig.vector_store.score_threshold,
             "hybrid_mode": self.hybrid_mode,
-            "query_expansion_enabled": True
+            "query_expansion_enabled": True,
         }
 
         if self.es_manager:
