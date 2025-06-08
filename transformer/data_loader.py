@@ -50,7 +50,7 @@ class TranslationDataset(Dataset):
             - decoder_target: [tgt_seq_len-1] - 解码器目标序列（去掉BOS）
         """
         en_text, it_text = self.data[idx]
-
+        #  en_text 就是一段文本，比如：hello word ,what are you doing now....
         # 编码文本为token ID序列
         # en_ids: [src_seq_len] - 英语token ID序列，包含BOS和EOS
         # it_ids: [tgt_seq_len] - 意大利语token ID序列，包含BOS和EOS

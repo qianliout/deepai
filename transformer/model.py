@@ -174,7 +174,7 @@ class MultiHeadAttention(nn.Module):
         # 步骤2: 应用掩码 (如果提供)
         if mask is not None:
             # mask中True的位置表示需要被掩盖的位置
-            # 将这些位置设为很大的负数，softmax后会接近0
+            # 将这些位置设为很小的负数，softmax后会接近0
             scores = scores.masked_fill(mask == True, -1e9)
 
         # 步骤3: 计算注意力权重 (softmax归一化)
@@ -494,7 +494,7 @@ class DecoderLayer(nn.Module):
             cross_attn_mask: 交叉注意力掩码
 
         Returns:
-            解码器层输出
+            解码器层输出  [batch_size, seq_len, d_model]
         """
         # 自注意力 + AddNorm
         self_attn_output = self.self_attention(x, x, x, self_attn_mask)

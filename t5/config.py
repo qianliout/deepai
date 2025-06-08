@@ -31,7 +31,8 @@ class T5Config(BaseModel):
     
     # 初始化参数
     initializer_factor: float = Field(default=1.0, description="权重初始化因子")
-    
+    use_custom_init: bool = Field(default=True, description="是否使用自定义权重初始化")
+
     # 序列长度
     max_length: int = Field(default=512, description="最大序列长度")
     

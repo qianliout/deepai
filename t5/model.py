@@ -408,13 +408,17 @@ class T5Model(nn.Module):
         self.encoder = T5Encoder(self.shared)
         self.decoder = T5Decoder(self.shared)
 
-        # 初始化权重
-        self.apply(self._init_weights)
+        # 方案1: 使用PyTorch内置初始化（可选）
+        if T5_CONFIG.use_custom_init:
+            self.apply(self._init_weights)
+        else:
+            # 使用PyTorch默认初始化，通常也能工作
+            pass
 
         logger.info(f"T5模型初始化完成，参数数量: {self.count_parameters():,}")
 
     def _init_weights(self, module):
-        """初始化权重"""
+        """自定义权重初始化（仅在use_custom_init=True时使用）"""
         factor = T5_CONFIG.initializer_factor
         if isinstance(module, LayerNorm):
             module.weight.data.fill_(1.0)
@@ -497,13 +501,17 @@ class T5ForConditionalGeneration(nn.Module):
         # 语言模型头
         self.lm_head = nn.Linear(T5_CONFIG.d_model, T5_CONFIG.vocab_size, bias=False)
 
-        # 初始化权重
-        self.apply(self._init_weights)
+        # 方案1: 使用PyTorch内置初始化（可选）
+        if T5_CONFIG.use_custom_init:
+            self.apply(self._init_weights)
+        else:
+            # 使用PyTorch默认初始化，通常也能工作
+            pass
 
         logger.info(f"T5ForConditionalGeneration初始化完成，参数数量: {self.count_parameters():,}")
 
     def _init_weights(self, module):
-        """初始化权重"""
+        """自定义权重初始化（仅在use_custom_init=True时使用）"""
         factor = T5_CONFIG.initializer_factor
         if isinstance(module, LayerNorm):
             module.weight.data.fill_(1.0)

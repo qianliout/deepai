@@ -41,7 +41,7 @@ class TrainingConfig(BaseModel):
 
     # 训练参数
     learning_rate: float = Field(default=1e-4, description="学习率")
-    num_epochs: int = Field(default=3, description="训练轮数")
+    num_epochs: int = Field(default=10, description="训练轮数")
     warmup_steps: int = Field(default=4000, description="学习率预热步数")
 
     # 设备配置
