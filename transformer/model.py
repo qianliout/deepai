@@ -339,7 +339,7 @@ class LayerNorm(nn.Module):
             eps: 数值稳定性参数
         """
         super().__init__()
-        # 在nn.LayerNorm这个方法中对应参数：elementwise_affine进行控制，默认为True
+        # 在nn.LayerNorm这个方法中对应参数：element wise_affine进行控制，默认为True
         # 会创建两个可学习参数weight和bias,就是这里的gamma和beta
         self.gamma = nn.Parameter(torch.ones(d_model))  # 可以理解成每个特征维总体均值
         self.beta = nn.Parameter(torch.zeros(d_model))  # 可以理解成每个特征维总体方差
@@ -393,8 +393,26 @@ class AddNorm(nn.Module):
         Args:
             x: 原始输入张量 [batch_size, seq_len, d_model]
             sublayer_output: 子层输出张量 [batch_size, seq_len, d_model]
-            # TODO 如何理解这里的sublayer_output
+            
+            # 自注意力 + AddNorm，使用地广如下：
+            attn_output = self.self_attention(x, x, x, mask)
+            x = self.add_norm1(x, attn_output)  # attn_output 就是 sublayer_output
 
+            # 前馈网络 + AddNorm  
+            ff_output = self.feed_forward(x)
+            x = self.add_norm2(x, ff_output)    # ff_output 就是 sublayer_output
+
+            # 自注意力 + AddNorm
+            self_attn_output = self.self_attention(x, x, x, self_attn_mask)
+            x = self.add_norm1(x, self_attn_output)  # self_attn_output 是 sublayer_output
+
+           # 交叉注意力 + AddNorm
+            cross_attn_output = self.cross_attention(x, encoder_output, encoder_output, cross_attn_mask)
+            x = self.add_norm2(x, cross_attn_output)  # cross_attn_output 是 sublayer_output
+
+            # 前馈网络 + AddNorm
+            ff_output = self.feed_forward(x)
+            x = self.add_norm3(x, ff_output)    # ff_output 是 sublayer_output
         Returns:
             AddNorm 输出 [batch_size, seq_len, d_model]
         """
@@ -490,8 +508,10 @@ class DecoderLayer(nn.Module):
         Args:
             x: 解码器输入 [batch_size, seq_len, d_model]
             encoder_output: 编码器输出 [batch_size, src_len, d_model]
-            self_attn_mask: 自注意力掩码
-            cross_attn_mask: 交叉注意力掩码
+            self_attn_mask: 自注意力掩码, 两个作用：
+            1：防止模型关注无效信息，如填充（padding）位置
+            2：防止模型关注未来位置的token，确保因果性
+            cross_attn_mask: 交叉注意力掩码，防止解码器在 cross-attention 阶段关注编码器输出中的 padding 位置
 
         Returns:
             解码器层输出  [batch_size, seq_len, d_model]
@@ -551,7 +571,19 @@ class Encoder(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
         # 初始化embedding权重
-        # TODO 一定要在这里手动初始化吗
+        # 一定要在这里手动初始化吗 
+        # 1. 不是绝对必须，但强烈推荐。
+        # 2. 为什么需要初始化？
+        # 神经网络的参数初始化对模型训练的收敛速度和最终性能有很大影响。
+        # Xavier 初始化（也叫 Glorot 初始化）是一种常用的初始化方法，能让每一层的输入和输出方差尽量一致，防止梯度消失或爆炸，尤其适合激活函数为 tanh 或 relu 的网络。
+        # 对于 Transformer 这种深层网络，良好的初始化可以让训练更稳定、收敛更快。
+        # 3. 如果不手动初始化会怎样？
+        # 依赖于 PyTorch 的默认初始化，通常也能训练，但可能收敛速度慢、效果不如手动初始化。 
+        # 4. 总结建议
+        # 建议手动初始化，尤其是复现论文或追求高性能时。
+        # 如果只是做实验或原型，默认初始化也可以，但遇到训练不稳定、收敛慢时，优先考虑手动初始化。
+        # 一句话总结：
+        # 不是绝对必须，但手动用 xavier_uniform_ 初始化 embedding 权重是深度学习工程中的良好实践，有助于模型训练的稳定和效果。
         nn.init.xavier_uniform_(self.embedding.weight)
 
     def forward(
@@ -568,6 +600,7 @@ class Encoder(nn.Module):
             编码器输出 [batch_size, seq_len, d_model]
         """
         # 词嵌入 + 位置编码
+        # 乘以 math.sqrt(self.d_model) 是为了让 embedding 的数值范围与后续网络保持一致，防止信息被稀释，是 Transformer 架构的标准做法。
         x = self.embedding(x) * math.sqrt(self.d_model)
         x = self.pos_encoding(x)
         x = self.dropout(x)
@@ -751,7 +784,7 @@ class Transformer(nn.Module):
         look_ahead_mask = torch.triu(
             torch.ones(tgt_len, tgt_len, device=tgt.device), diagonal=1
         ).bool()
-
+        # True 表示需要 mask（即不能看到）
         # 示例: 如果tgt_len=4，则look_ahead_mask为:
         # [[False, True,  True,  True ],
         #  [False, False, True,  True ],

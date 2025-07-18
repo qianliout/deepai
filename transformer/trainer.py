@@ -18,22 +18,28 @@ from utils import setup_logging, save_model, count_parameters, format_time
 
 class LabelSmoothingLoss(nn.Module):
     """
-    标签平滑损失函数
-    """
+    标签平滑损失函数 - 防止模型过度确信，提高泛化能力
 
+    核心思想：
+    1. 传统交叉熵：正确答案概率为1.0，其他为0（硬标签）
+    2. 标签平滑：正确答案概率为0.9，其他类别平均分配0.1（软标签）
+    3. 优势：防止过拟合，提高训练稳定性，增强泛化能力
+    """
     def __init__(self, vocab_size: int, smoothing: float = 0.1, ignore_index: int = 0):
         """
         初始化标签平滑损失
 
         Args:
             vocab_size: 词汇表大小
-            smoothing: 平滑参数
-            ignore_index: 忽略的索引（通常是PAD token）
+            smoothing: 平滑参数（如0.1表示将0.1的概率分配给错误标签）
+            ignore_index: 忽略的索引（通常是PAD token，不参与损失计算）
         """
         super().__init__()
         self.vocab_size = vocab_size
-        self.smoothing = smoothing
-        self.ignore_index = ignore_index
+        self.smoothing = smoothing  # 标签平滑参数，决定“软标签”分配给非目标类别的概率总和（如0.1）
+        self.ignore_index = ignore_index  # 忽略的标签索引（通常是PAD token的ID），这些位置不参与损失计算
+        # 正确标签的置信度 = 1.0 - smoothing
+        # 例如 smoothing=0.1 时，正确类别的概率为0.9，其余类别平分0.1
         self.confidence = 1.0 - smoothing
 
     def forward(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
@@ -45,30 +51,46 @@ class LabelSmoothingLoss(nn.Module):
             target: 目标标签 [batch_size, seq_len]
 
         Returns:
-            损失值
+            损失值（标量）
         """
         batch_size, seq_len, vocab_size = pred.size()
 
-        # 重塑张量
-        pred = pred.view(-1, vocab_size)  # [batch_size * seq_len, vocab_size]
-        target = target.view(-1)  # [batch_size * seq_len]
+        # 1. 重塑张量为二维，方便后续处理
+        # pred: [batch_size, seq_len, vocab_size] -> [batch_size * seq_len, vocab_size]
+        # target: [batch_size, seq_len] -> [batch_size * seq_len]
+        pred = pred.view(-1, vocab_size)
+        target = target.view(-1)
 
-        # 创建平滑标签
+        # 2. 创建平滑标签分布
+        # 初始化所有类别的概率为 smoothing / (vocab_size - 2)
+        # -2 是因为要排除PAD token和目标token本身
         true_dist = torch.zeros_like(pred)
-        true_dist.fill_(self.smoothing / (vocab_size - 2))  # 减去PAD和目标token
+        smooth_prob = self.smoothing / (vocab_size - 2)
+        true_dist.fill_(smooth_prob)
+
+        # 3. 设置正确标签的置信度（如0.9）
+        # scatter_ 在每一行的 target 指定的位置填入 self.confidence
         true_dist.scatter_(1, target.unsqueeze(1), self.confidence)
+
+        # 4. 将PAD token的概率设为0（不参与损失计算）
         true_dist[:, self.ignore_index] = 0
 
-        # 创建掩码，忽略PAD token
+        # 5. 创建掩码，忽略PAD token
+        # mask: 1表示有效token，0表示PAD token
         mask = (target != self.ignore_index).float()
 
-        # 计算KL散度
+        # 6. 计算KL散度
+        # KL(P||Q) = Σ P * (log(P) - log(Q))
+        # 这里P为true_dist（平滑标签），Q为softmax(pred)（模型预测概率）
+        # torch.log_softmax(pred, dim=1)：对预测logits做softmax再取对数
+        # torch.log(true_dist + 1e-12)：对平滑标签取对数（加1e-12防止log(0)）
         kl_div = torch.sum(
             true_dist * (torch.log(true_dist + 1e-12) - torch.log_softmax(pred, dim=1)),
-            dim=1,
+            dim=1,  # 在词汇表维度上求和
         )
 
-        # 应用掩码并计算平均损失
+        # 7. 应用掩码并计算平均损失
+        # 只统计非PAD token的损失
         loss = torch.sum(kl_div * mask) / torch.sum(mask)
 
         return loss
