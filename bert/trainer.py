@@ -229,7 +229,8 @@ class BertTrainer:
             # 学习率调度器（如余弦退火调度器、线性衰减调度器等）根据当前训练状态（如步数、epoch 数或损失值）调整优化器的 学习率。
             # 学习率是训练的核心超参数，合理调整可加速收敛或避免过拟合。
             # 执行顺序说明
-            # 通常先执行 optimizer.step() 更新参数，再执行 scheduler.step() 更新学习率。这是因为学习率调度器可能依赖当前步数（如热身策略在初始阶段逐渐增加学习率），而参数更新后才需要调整下一次更新的学习率。
+            # 通常先执行 optimizer.step() 更新参数，再执行 scheduler.step() 更新学习率。这是因为学习率调度器可能依赖当前步数
+            #（如热身策略在初始阶段逐渐增加学习率），而参数更新后才需要调整下一次更新的学习率。
             self.optimizer.step()
             self.scheduler.step()
             self.optimizer.zero_grad()

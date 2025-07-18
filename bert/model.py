@@ -166,6 +166,7 @@ class BertEncoder(nn.Module):
 
             # 通过当前层
             layer_outputs = layer_module(hidden_states, attention_mask, output_attentions)
+            # BERT 的核心是由多层 Transformer 编码器堆叠而成。每一层都会对输入的 hidden states 进行进一步的特征提取和变换。
             hidden_states = layer_outputs[0]  # (batch_size, seq_len, hidden_size)
 
             if output_attentions:
@@ -402,8 +403,8 @@ class BertLMPredictionHead(nn.Module):
         hidden_states = self.transform(hidden_states)  # (batch_size, seq_len, hidden_size)
         hidden_states = self.activation(hidden_states)  # (batch_size, seq_len, hidden_size)
         hidden_states = self.layer_norm(hidden_states)  # (batch_size, seq_len, hidden_size)
-        hidden_states = self.decoder(hidden_states)  # (batch_size, seq_len, vocab_size)
-        return hidden_states
+        output = self.decoder(hidden_states)  # (batch_size, seq_len, vocab_size)
+        return output
 
 
 class BertNSPHead(nn.Module):

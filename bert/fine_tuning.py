@@ -267,7 +267,7 @@ class BertFineTuner:
             # 优化器步骤
             self.optimizer.step()
             self.scheduler.step()
-            self.optimizer.zero_grad()
+            self.optimizer.zero_grad() # 清空梯度，防止梯度累计
 
             # 更新统计
             epoch_loss += loss.item()
@@ -321,7 +321,9 @@ class BertFineTuner:
 
                 # 收集结果
                 eval_loss += loss.item()
-                # TODO 这里 extend 是什么意思，什么作用
+                # 将当前batch的预测结果（preds）从GPU移到CPU，并转换为NumPy数组，
+                # 然后用extend方法把这些预测结果逐个添加到predictions列表中。
+                # 这样做的目的是把所有batch的预测结果收集到一个大列表里，方便后续统一计算准确率、F1等指标。
                 predictions.extend(preds.cpu().numpy())
                 true_labels.extend(batch["labels"].cpu().numpy())
                 num_batches += 1
