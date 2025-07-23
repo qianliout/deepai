@@ -11,8 +11,10 @@ torch>=2.0.0
 transformers>=4.30.0
 sentence-transformers>=2.2.0
 
-# 向量数据库 (只使用ChromaDB)
+# 向量数据库
 chromadb>=0.4.0
+psycopg2-binary>=2.9.0  # PostgreSQL数据库驱动
+pgvector>=0.2.0  # PostgreSQL向量扩展
 
 # 数据处理
 pydantic>=2.0.0

@@ -7,12 +7,21 @@
 - helpers: 辅助函数
 """
 
-from .logger import setup_logger, get_logger
-from .metrics import RAGMetrics
-from .helpers import *
+from .logger import get_logger
+
+try:
+    from .metrics import RAGMetrics
+except ImportError:
+    RAGMetrics = None
+
+try:
+    from .helpers import *
+except ImportError:
+    pass
 
 __all__ = [
-    "setup_logger",
-    "get_logger", 
-    "RAGMetrics"
+    "get_logger"
 ]
+
+if RAGMetrics:
+    __all__.append("RAGMetrics")

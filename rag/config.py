@@ -41,12 +41,16 @@ class LLMConfig(BaseModel):
 
 class VectorStoreConfig(BaseModel):
     """向量存储配置"""
-    
-    persist_directory: str = Field(default="data/vectorstore", description="ChromaDB数据目录")
+
+    # 通用配置
+    backend: str = Field(default="chromadb", description="向量数据库后端: chromadb, postgresql")
     collection_name: str = Field(default="knowledge_base", description="集合名称")
     top_k: int = Field(default=5, description="检索返回数量")
     score_threshold: float = Field(default=0.3, description="相似度阈值")
-    
+
+    # ChromaDB配置
+    persist_directory: str = Field(default="data/vectorstore", description="ChromaDB数据目录")
+
     class Config:
         extra = "forbid"
 
@@ -149,10 +153,28 @@ class MySQLConfig(BaseModel):
     host: str = Field(default="localhost", description="MySQL主机地址")
     port: int = Field(default=3306, description="MySQL端口")
     username: str = Field(default="root", description="MySQL用户名")
-    password: str = Field(default="", description="MySQL密码")
+    password: str = Field(default="root", description="MySQL密码")
     database: str = Field(default="rag_system", description="数据库名称")
     charset: str = Field(default="utf8mb4", description="字符集")
     autocommit: bool = Field(default=True, description="是否自动提交")
+    pool_size: int = Field(default=10, description="连接池大小")
+    max_overflow: int = Field(default=20, description="连接池最大溢出")
+    pool_timeout: int = Field(default=30, description="连接池超时时间")
+
+    class Config:
+        extra = "forbid"
+
+
+class PostgreSQLConfig(BaseModel):
+    """PostgreSQL向量数据库配置"""
+
+    host: str = Field(default="localhost", description="PostgreSQL主机地址")
+    port: int = Field(default=5432, description="PostgreSQL端口")
+    username: str = Field(default="postgres", description="PostgreSQL用户名")
+    password: str = Field(default="postgres", description="PostgreSQL密码")
+    database: str = Field(default="rag_vectordb", description="向量数据库名称")
+    table_name: str = Field(default="documents", description="文档表名称")
+    vector_dimension: int = Field(default=512, description="向量维度")
     pool_size: int = Field(default=10, description="连接池大小")
     max_overflow: int = Field(default=20, description="连接池最大溢出")
     pool_timeout: int = Field(default=30, description="连接池超时时间")
@@ -273,6 +295,7 @@ class Config(BaseModel):
     redis: RedisConfig = Field(default_factory=RedisConfig)
     elasticsearch: ElasticsearchConfig = Field(default_factory=ElasticsearchConfig)
     mysql: MySQLConfig = Field(default_factory=MySQLConfig)
+    postgresql: PostgreSQLConfig = Field(default_factory=PostgreSQLConfig)
 
 # 默认配置实例
 defaultConfig = Config()

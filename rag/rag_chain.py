@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from logger import get_logger, log_execution_time
 from config import defaultConfig
 from embeddings import EmbeddingManager
-from vector_store import VectorStoreManager
+from vector_store import create_vector_store_manager
 from llm import LLMManager
 from retriever import HybridRetrieverManager
 from session_manager import RedisSessionManager
@@ -49,8 +49,8 @@ class RAGChain:
             # 嵌入管理器
             self.embedding_manager = EmbeddingManager()
 
-            # 向量存储
-            self.vector_store = VectorStoreManager(self.embedding_manager)
+            # 向量存储 (使用工厂函数创建)
+            self.vector_store = create_vector_store_manager(self.embedding_manager)
 
             # 混合检索器
             self.retriever = HybridRetrieverManager(self.vector_store, self.embedding_manager)

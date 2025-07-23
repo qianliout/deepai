@@ -1,17 +1,19 @@
 """
-向量存储模块 - 简化版
+向量存储模块 - 支持多种向量数据库后端
 
-该模块负责ChromaDB向量数据库的管理。
+该模块负责向量数据库的管理，支持ChromaDB和PostgreSQL。
 提供文档的向量化存储、相似度检索和索引管理功能。
 
 数据流：
-1. 文档输入 -> 向量化 -> 存储到ChromaDB
+1. 文档输入 -> 向量化 -> 存储到向量数据库
 2. 查询输入 -> 向量化 -> 相似度检索 -> 返回相关文档
 
-使用ChromaDB作为唯一的向量存储后端，底层使用SQLite持久化。
+支持的后端：
+- ChromaDB: 轻量级向量数据库，底层使用SQLite持久化
+- PostgreSQL: 企业级数据库 + pgvector扩展
 """
 
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, Union
 from pathlib import Path
 import uuid
 
@@ -214,29 +216,37 @@ class VectorStoreManager:
             self.logger.error(f"删除文档失败: {e}")
             raise
 
-    def update_documents(self, doc_ids: List[str], documents: List[Document], embeddings: Optional[List[List[float]]] = None) -> None:
-        """更新指定文档
 
-        Args:
-            doc_ids: 要更新的文档ID列表
-            documents: 新的文档内容
-            embeddings: 新的嵌入向量
-        """
+def create_vector_store_manager(embedding_manager: embeddings.EmbeddingManager) -> Union[VectorStoreManager, Any]:
+    """向量存储管理器工厂函数
+
+    根据配置创建相应的向量存储管理器实例
+
+    Args:
+        embedding_manager: 嵌入管理器实例
+
+    Returns:
+        向量存储管理器实例
+    """
+    logger = get_logger("VectorStoreFactory")
+    backend = defaultConfig.vector_store.backend.lower()
+
+    logger.info(f"创建向量存储管理器: {backend}")
+
+    if backend == "chromadb":
+        return VectorStoreManager(embedding_manager)
+    elif backend == "postgresql":
         try:
-            # 计算嵌入向量
-            if embeddings is None:
-                texts = [doc.page_content for doc in documents]
-                embeddings = self.embedding_manager.embed_documents(texts)
+            from postgresql_vector_store import PostgreSQLVectorStoreManager
+            return PostgreSQLVectorStoreManager(embedding_manager)
+        except ImportError as e:
+            logger.error(f"PostgreSQL向量存储依赖缺失: {e}")
+            logger.info("回退到ChromaDB")
+            return VectorStoreManager(embedding_manager)
+    else:
+        logger.warning(f"不支持的向量存储后端: {backend}，使用默认的ChromaDB")
+        return VectorStoreManager(embedding_manager)
 
-            # 准备数据
-            texts = [doc.page_content for doc in documents]
-            metadatas = [doc.metadata for doc in documents]
 
-            # 更新ChromaDB中的文档
-            self.collection.update(ids=doc_ids, embeddings=embeddings, documents=texts, metadatas=metadatas)
-
-            self.logger.info(f"成功更新 {len(doc_ids)} 个文档")
-
-        except Exception as e:
-            self.logger.error(f"更新文档失败: {e}")
-            raise
+# 为了保持向后兼容性，保留原有的类名别名
+# VectorStoreManager = VectorStoreManager  # 这行会导致循环引用，注释掉

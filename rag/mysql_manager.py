@@ -49,7 +49,7 @@ class ConversationRecord(Base):
     user_id = Column(String(36), nullable=True, index=True)
     role = Column(String(20), nullable=False)  # user, assistant, system
     content = Column(Text, nullable=False)
-    metadata = Column(JSON, nullable=True)
+    meta_data = Column("metadata", JSON, nullable=True)  # 避免SQLAlchemy保留字冲突
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     token_count = Column(Integer, nullable=True)
@@ -63,7 +63,7 @@ class ConversationRecord(Base):
             "user_id": self.user_id,
             "role": self.role,
             "content": self.content,
-            "metadata": self.metadata,
+            "metadata": self.meta_data,  # 保持外部接口不变
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "token_count": self.token_count,
@@ -80,7 +80,7 @@ class SessionRecord(Base):
     user_id = Column(String(36), nullable=True, index=True)
     title = Column(String(255), nullable=True)
     status = Column(String(20), default="active", nullable=False)  # active, archived, deleted
-    metadata = Column(JSON, nullable=True)
+    meta_data = Column("metadata", JSON, nullable=True)  # 避免SQLAlchemy保留字冲突
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     message_count = Column(Integer, default=0, nullable=False)
@@ -93,7 +93,7 @@ class SessionRecord(Base):
             "user_id": self.user_id,
             "title": self.title,
             "status": self.status,
-            "metadata": self.metadata,
+            "metadata": self.meta_data,  # 保持外部接口不变
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "message_count": self.message_count,
@@ -136,7 +136,7 @@ class MockMySQLManager:
             "user_id": conversation.user_id,
             "role": conversation.role,
             "content": conversation.content,
-            "metadata": conversation.metadata,
+            "metadata": conversation.metadata,  # 保持接口一致
             "created_at": datetime.utcnow().isoformat(),
             "updated_at": datetime.utcnow().isoformat(),
             "token_count": conversation.token_count,
@@ -279,7 +279,7 @@ class MySQLManager:
                     user_id=conversation.user_id,
                     role=conversation.role,
                     content=conversation.content,
-                    metadata=conversation.metadata,
+                    meta_data=conversation.metadata,  # 字段名变更
                     token_count=conversation.token_count,
                     processing_time=conversation.processing_time,
                 )
@@ -369,7 +369,7 @@ class MySQLManager:
 
                 # 创建新会话
                 session_record = SessionRecord(
-                    id=session_id, user_id=user_id, title=title or f"会话_{session_id[:8]}", metadata=metadata or {}
+                    id=session_id, user_id=user_id, title=title or f"会话_{session_id[:8]}", meta_data=metadata or {}
                 )
 
                 session.add(session_record)

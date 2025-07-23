@@ -174,7 +174,8 @@ rag/
 │   └── logger.py                    # 日志管理
 │
 ├── 🗄️ 存储模块
-│   ├── vector_store.py              # ChromaDB向量存储
+│   ├── vector_store.py              # 向量存储工厂(支持多后端)
+│   ├── postgresql_vector_store.py   # PostgreSQL向量存储
 │   ├── elasticsearch_manager.py     # ES文档存储
 │   ├── mysql_manager.py             # MySQL对话存储
 │   ├── session_manager.py           # Redis会话管理
@@ -252,7 +253,9 @@ rag/
 ├─────────────────────────────────────────────────────────────┤
 │  🗄️ 存储层                                                 │
 │  ├── Redis (会话+上下文)    ├── MySQL (对话持久化)         │
-│  ├── Elasticsearch (文档)   └── ChromaDB (向量)            │
+│  ├── Elasticsearch (文档)   └── 向量数据库 (多后端支持)    │
+│  │                           ├── ChromaDB (轻量级)        │
+│  │                           └── PostgreSQL (企业级)      │
 ├─────────────────────────────────────────────────────────────┤
 │  🔧 基础设施层                                              │
 │  ├── 配置管理 (config.py)                                  │
@@ -269,7 +272,7 @@ rag/
     ↓           ↓           ↓           ↓           ↓           ↓
   会话管理   同义词扩展   文档粗排    语义精排    历史压缩    智能回答
     ↓           ↓           ↓           ↓           ↓           ↓
-Redis存储   JiebaTokenizer  ES索引   ChromaDB   Transformers  通义百炼
+Redis存储   JiebaTokenizer  ES索引   向量数据库  Transformers  通义百炼
 ```
 
 ### 🛠️ 技术栈
@@ -279,7 +282,9 @@ Redis存储   JiebaTokenizer  ES索引   ChromaDB   Transformers  通义百炼
 | **AI 框架**    | LangChain     | 0.2+     | LLM 应用开发框架     |
 | **LLM**        | 通义百炼      | API      | 大语言模型服务       |
 | **嵌入模型**   | BGE-small-zh  | v1.5     | 中文文本向量化       |
-| **向量数据库** | ChromaDB      | 0.4+     | 向量存储和检索       |
+| **向量数据库** | ChromaDB      | 0.4+     | 轻量级向量存储       |
+|                | PostgreSQL    | 15+      | 企业级向量数据库     |
+|                | pgvector      | 0.5+     | PostgreSQL向量扩展   |
 | **搜索引擎**   | Elasticsearch | 8.0+     | 文档索引和关键词检索 |
 | **缓存数据库** | Redis         | 6.0+     | 会话和上下文管理     |
 | **关系数据库** | MySQL         | 8.0+     | 对话数据持久化       |
@@ -301,15 +306,39 @@ class EmbeddingConfig:
     batch_size: int = 32  # 批处理大小
 ```
 
-### ChromaDB 配置
+### 向量数据库配置
+
+支持多种向量数据库后端：
 
 ```python
-class ChromaDBConfig:
-    persist_directory: str = "data/vectorstore"  # 数据持久化目录
+class VectorStoreConfig:
+    backend: str = "chromadb"  # 向量数据库后端: chromadb, postgresql
     collection_name: str = "knowledge_base"  # 集合名称
     top_k: int = 5  # 检索返回数量
-    score_threshold: float = 0.7  # 相似度阈值
+    score_threshold: float = 0.3  # 相似度阈值
+    persist_directory: str = "data/vectorstore"  # ChromaDB数据目录
 ```
+
+#### ChromaDB配置
+- **轻量级**: 适合开发和小规模部署
+- **零配置**: 开箱即用，无需额外设置
+- **SQLite后端**: 数据持久化到本地文件
+
+#### PostgreSQL配置
+```python
+class PostgreSQLConfig:
+    host: str = "localhost"
+    port: int = 5432
+    username: str = "postgres"
+    password: str = "postgres"
+    database: str = "rag_vectordb"
+    table_name: str = "documents"
+    vector_dimension: int = 512
+```
+
+- **企业级**: 适合生产环境和大规模部署
+- **高性能**: 支持pgvector扩展，提供优化的向量操作
+- **可扩展**: 支持分布式部署和高可用配置
 
 ### LLM 配置
 
@@ -374,10 +403,11 @@ python main.py quick
 
 ### Python API 使用
 
+#### 使用ChromaDB (默认)
 ```python
 from main import RAGSystem
 
-# 初始化系统
+# 初始化系统 (默认使用ChromaDB)
 rag = RAGSystem()
 rag.initialize()
 
@@ -385,6 +415,24 @@ rag.initialize()
 rag.build_knowledge_base("./documents", clear_existing=True)
 
 # 查询
+answer = rag.query_knowledge_base("什么是机器学习？")
+print(answer)
+```
+
+#### 使用PostgreSQL
+```python
+from config import defaultConfig
+from main import RAGSystem
+
+# 配置PostgreSQL后端
+defaultConfig.vector_store.backend = "postgresql"
+
+# 初始化系统
+rag = RAGSystem()
+rag.initialize()
+
+# 其他操作相同
+rag.build_knowledge_base("./documents", clear_existing=True)
 answer = rag.query_knowledge_base("什么是机器学习？")
 print(answer)
 
@@ -421,7 +469,16 @@ print(f"文档数量: {stats['document_count']}")
 - **搜索高亮**: 结果高亮显示
 - **模糊匹配**: 智能模糊搜索
 
-#### ChromaDB 向量存储
+#### 向量数据库存储
+
+支持多种向量数据库后端，可根据需求选择：
+
+##### ChromaDB (默认)
+- **轻量级部署**: 零配置，开箱即用
+- **本地存储**: SQLite持久化，适合开发环境
+- **快速原型**: 适合快速验证和小规模应用
+
+##### PostgreSQL + pgvector (推荐生产环境)
 
 - **向量索引**: 高维向量快速检索
 - **语义搜索**: 基于语义的相似度计算
