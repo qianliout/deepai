@@ -183,6 +183,34 @@ class PostgreSQLConfig(BaseModel):
         extra = "forbid"
 
 
+class RerankerConfig(BaseModel):
+    """重排序器配置"""
+
+    # 双编码器配置
+    bi_encoder_model: str = Field(default="BAAI/bge-reranker-base", description="双编码器模型名称")
+    bi_encoder_enabled: bool = Field(default=True, description="是否启用双编码器")
+    bi_encoder_top_k: int = Field(default=20, description="双编码器筛选的候选数量")
+
+    # 交叉编码器配置
+    cross_encoder_model: str = Field(default="BAAI/bge-reranker-v2-m3", description="交叉编码器模型名称")
+    cross_encoder_enabled: bool = Field(default=True, description="是否启用交叉编码器")
+    cross_encoder_top_k: int = Field(default=10, description="交叉编码器最终返回数量")
+
+    # 通用配置
+    device: str = Field(default="auto", description="计算设备")
+    batch_size: int = Field(default=16, description="批处理大小")
+    cache_dir: str = Field(default="/Users/liuqianli/.cache/huggingface/hub", description="模型缓存目录")
+
+    # 分数融合配置
+    fusion_method: str = Field(default="weighted", description="分数融合方法: weighted, rrf, max")
+    bi_encoder_weight: float = Field(default=0.3, description="双编码器权重")
+    cross_encoder_weight: float = Field(default=0.7, description="交叉编码器权重")
+    original_weight: float = Field(default=0.2, description="原始检索分数权重")
+
+    class Config:
+        extra = "forbid"
+
+
 
 def get_device() -> str:
     """自动检测设备"""
@@ -296,6 +324,7 @@ class Config(BaseModel):
     elasticsearch: ElasticsearchConfig = Field(default_factory=ElasticsearchConfig)
     mysql: MySQLConfig = Field(default_factory=MySQLConfig)
     postgresql: PostgreSQLConfig = Field(default_factory=PostgreSQLConfig)
+    reranker: RerankerConfig = Field(default_factory=RerankerConfig)
 
 # 默认配置实例
 defaultConfig = Config()

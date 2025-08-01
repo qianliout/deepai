@@ -29,6 +29,14 @@ from query_expander import SimpleQueryExpander
 # 尝试导入ES管理器，如果失败则使用向量检索
 from elasticsearch_manager import ElasticsearchManager, SearchResult
 
+# 导入重排序器
+try:
+    from reranker import HybridReranker, RerankResult
+    RERANKER_AVAILABLE = True
+except ImportError as e:
+    RERANKER_AVAILABLE = False
+    print(f"重排序器不可用: {e}")
+
 @dataclass
 class RetrievalResult:
     """检索结果数据结构"""
@@ -56,12 +64,13 @@ class HybridRetrieverManager:
         query_expander: 查询扩展器
     """
 
-    def __init__(self, vector_store, embedding_manager=None):
+    def __init__(self, vector_store, embedding_manager=None, enable_reranking=True):
         """初始化混合检索器管理器
 
         Args:
             vector_store: 向量存储管理器
             embedding_manager: 嵌入管理器
+            enable_reranking: 是否启用重排序
         """
         self.logger = get_logger("HybridRetrieverManager")
         self.vector_store = vector_store
@@ -80,6 +89,17 @@ class HybridRetrieverManager:
             self.es_manager = None
             self.hybrid_mode = False
 
+        # 初始化重排序器（如果可用且启用）
+        self.reranker = None
+        self.reranking_enabled = enable_reranking and RERANKER_AVAILABLE
+        if self.reranking_enabled:
+            try:
+                self.reranker = HybridReranker()
+                self.logger.info("重排序器初始化成功")
+            except Exception as e:
+                self.logger.warning(f"重排序器初始化失败: {e}")
+                self.reranking_enabled = False
+
         self.logger.info("混合检索器管理器初始化完成")
 
     @log_execution_time("retrieve_documents")
@@ -97,7 +117,8 @@ class HybridRetrieverManager:
         return [result.document for result in results]
 
     def retrieve(
-        self, query: str, top_k: Optional[int] = None, es_candidates: int = 50, use_query_expansion: bool = True, **kwargs
+        self, query: str, top_k: Optional[int] = None, es_candidates: int = 50, use_query_expansion: bool = True,
+        use_reranking: bool = True, **kwargs
     ) -> List[RetrievalResult]:
         """执行混合检索
 
@@ -106,6 +127,7 @@ class HybridRetrieverManager:
             top_k: 最终返回结果数量
             es_candidates: ES粗排候选数量
             use_query_expansion: 是否使用查询扩展
+            use_reranking: 是否使用重排序
             **kwargs: 额外参数
 
         Returns:
@@ -116,12 +138,21 @@ class HybridRetrieverManager:
         try:
             self.logger.info(f"开始混合检索: {query[:50]}... | top_k: {top_k}")
 
+            # 第一阶段：基础检索
             if self.hybrid_mode and self.es_manager:
                 # 混合检索模式：ES粗排 + 向量精排
-                return self._hybrid_retrieve(query, top_k, es_candidates, use_query_expansion, **kwargs)
+                initial_results = self._hybrid_retrieve(query, top_k, es_candidates, use_query_expansion, **kwargs)
             else:
                 # 纯向量检索模式
-                return self._vector_only_retrieve(query, top_k, use_query_expansion, **kwargs)
+                initial_results = self._vector_only_retrieve(query, top_k, use_query_expansion, **kwargs)
+
+            # 第二阶段：重排序（如果启用）
+            if use_reranking and self.reranking_enabled and self.reranker and initial_results:
+                self.logger.debug("开始重排序阶段")
+                reranked_results = self._apply_reranking(query, initial_results, top_k)
+                return reranked_results
+            else:
+                return initial_results
 
         except Exception as e:
             self.logger.error(f"检索失败: {e}")
@@ -336,6 +367,66 @@ class HybridRetrieverManager:
 
         return results
 
+    def _apply_reranking(self, query: str, initial_results: List[RetrievalResult], top_k: int) -> List[RetrievalResult]:
+        """应用重排序
+
+        Args:
+            query: 查询字符串
+            initial_results: 初始检索结果
+            top_k: 最终返回结果数量
+
+        Returns:
+            重排序后的结果列表
+        """
+        try:
+            # 转换为Document格式
+            documents = []
+            for result in initial_results:
+                # 保存原始分数到文档metadata中
+                doc = result.document
+                if hasattr(doc, 'metadata'):
+                    doc.metadata['original_retrieval_score'] = result.score
+                else:
+                    doc.metadata = {'original_retrieval_score': result.score}
+                documents.append(doc)
+
+            # 执行重排序
+            rerank_results = self.reranker.rerank(query, documents, top_k)
+
+            # 转换回RetrievalResult格式
+            final_results = []
+            for rerank_result in rerank_results:
+                # 创建新的RetrievalResult，保留重排序信息
+                retrieval_result = RetrievalResult(
+                    document=rerank_result.document,
+                    score=rerank_result.final_score,
+                    retrieval_method=f"hybrid_with_rerank_{rerank_result.rerank_method}",
+                    rank=rerank_result.rank,
+                    # 保留原始分数信息
+                    es_score=getattr(rerank_result.document.metadata, 'es_score', None),
+                    vector_score=getattr(rerank_result.document.metadata, 'vector_score', None),
+                    combined_score=rerank_result.final_score
+                )
+
+                # 添加重排序相关的metadata
+                if hasattr(retrieval_result.document, 'metadata'):
+                    retrieval_result.document.metadata.update({
+                        'rerank_bi_encoder_score': rerank_result.bi_encoder_score,
+                        'rerank_cross_encoder_score': rerank_result.cross_encoder_score,
+                        'rerank_final_score': rerank_result.final_score,
+                        'rerank_method': rerank_result.rerank_method
+                    })
+
+                final_results.append(retrieval_result)
+
+            self.logger.debug(f"重排序完成: {len(initial_results)} -> {len(final_results)}")
+            return final_results
+
+        except Exception as e:
+            self.logger.error(f"重排序失败: {e}")
+            # 回退到原始结果
+            return initial_results[:top_k]
+
     def get_retrieval_stats(self) -> Dict[str, Any]:
         """获取检索统计信息"""
         vector_stats = self.vector_store.get_stats()
@@ -347,11 +438,16 @@ class HybridRetrieverManager:
             "score_threshold": defaultConfig.vector_store.score_threshold,
             "hybrid_mode": self.hybrid_mode,
             "query_expansion_enabled": True,
+            "reranking_enabled": self.reranking_enabled,
         }
 
         if self.es_manager:
             es_info = self.es_manager.get_connection_info()
             stats["elasticsearch_info"] = es_info
+
+        # 添加重排序器信息
+        if self.reranker:
+            stats["reranker_info"] = self.reranker.get_reranker_info()
 
         return stats
 

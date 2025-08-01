@@ -11,6 +11,11 @@ torch>=2.0.0
 transformers>=4.30.0
 sentence-transformers>=2.2.0
 
+# 重排序模型支持
+# 注意：这些模型需要从Hugging Face下载，确保网络连接正常
+# 双编码器模型：BAAI/bge-reranker-base
+# 交叉编码器模型：BAAI/bge-reranker-v2-m3
+
 # 向量数据库
 chromadb>=0.4.0
 psycopg2-binary>=2.9.0  # PostgreSQL数据库驱动
