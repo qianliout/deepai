@@ -211,6 +211,25 @@ class RerankerConfig(BaseModel):
         extra = "forbid"
 
 
+class Neo4jConfig(BaseModel):
+    """Neo4j图数据库配置"""
+
+    uri: str = Field(default="bolt://localhost:7687", description="Neo4j连接URI")
+    username: str = Field(default="neo4j", description="用户名")
+    password: str = Field(default="aiops123456", description="密码")
+    database: str = Field(default="neo4j", description="数据库名称")
+    max_connection_lifetime: int = Field(default=3600, description="连接最大生存时间(秒)")
+    max_connection_pool_size: int = Field(default=50, description="连接池最大大小")
+    connection_timeout: int = Field(default=30, description="连接超时时间(秒)")
+    max_transaction_retry_time: int = Field(default=30, description="事务最大重试时间(秒)")
+    resolver_address: str = Field(default="", description="DNS解析器地址")
+    encrypted: bool = Field(default=False, description="是否启用加密连接")
+    trust: str = Field(default="TRUST_ALL_CERTIFICATES", description="证书信任策略")
+
+    class Config:
+        extra = "forbid"
+
+
 
 def get_device() -> str:
     """自动检测设备"""
@@ -325,6 +344,7 @@ class Config(BaseModel):
     mysql: MySQLConfig = Field(default_factory=MySQLConfig)
     postgresql: PostgreSQLConfig = Field(default_factory=PostgreSQLConfig)
     reranker: RerankerConfig = Field(default_factory=RerankerConfig)
+    neo4j: Neo4jConfig = Field(default_factory=Neo4jConfig)
 
 # 默认配置实例
 defaultConfig = Config()
