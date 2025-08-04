@@ -32,58 +32,65 @@ from ner_manager import Entity, EntityType
 
 class SlotStatus(Enum):
     """槽位状态枚举"""
-    EMPTY = "EMPTY"           # 空槽位
-    FILLED = "FILLED"         # 已填充
-    CONFIRMED = "CONFIRMED"   # 已确认
-    UPDATED = "UPDATED"       # 已更新
-    EXPIRED = "EXPIRED"       # 已过期
+
+    EMPTY = "EMPTY"  # 空槽位
+    FILLED = "FILLED"  # 已填充
+    CONFIRMED = "CONFIRMED"  # 已确认
+    UPDATED = "UPDATED"  # 已更新
+    EXPIRED = "EXPIRED"  # 已过期
 
 
 class IntentType(Enum):
     """意图类型枚举"""
-    QUERY = "QUERY"                    # 查询意图
-    CHECK_STATUS = "CHECK_STATUS"      # 状态检查
-    MONITOR = "MONITOR"                # 监控意图
-    TROUBLESHOOT = "TROUBLESHOOT"      # 故障排查
-    CONFIGURE = "CONFIGURE"            # 配置意图
-    COMPARE = "COMPARE"                # 比较意图
-    FOLLOW_UP = "FOLLOW_UP"            # 后续询问
-    CLARIFICATION = "CLARIFICATION"    # 澄清意图
-    OTHER = "OTHER"                    # 其他意图
+
+    QUERY = "QUERY"  # 查询意图
+    CHECK_STATUS = "CHECK_STATUS"  # 状态检查
+    MONITOR = "MONITOR"  # 监控意图
+    TROUBLESHOOT = "TROUBLESHOOT"  # 故障排查
+    CONFIGURE = "CONFIGURE"  # 配置意图
+    COMPARE = "COMPARE"  # 比较意图
+    FOLLOW_UP = "FOLLOW_UP"  # 后续询问
+    CLARIFICATION = "CLARIFICATION"  # 澄清意图
+    OTHER = "OTHER"  # 其他意图
 
 
 @dataclass
 class Slot:
     """槽位数据结构"""
-    name: str                    # 槽位名称
-    entity_type: EntityType      # 实体类型
+
+    name: str  # 槽位名称
+    entity_type: EntityType  # 实体类型
     value: Optional[str] = None  # 槽位值
     entity: Optional[Entity] = None  # 关联实体
     status: SlotStatus = SlotStatus.EMPTY  # 槽位状态
-    confidence: float = 0.0      # 置信度
-    last_updated: float = 0.0    # 最后更新时间
-    update_count: int = 0        # 更新次数
+    confidence: float = 0.0  # 置信度
+    last_updated: float = 0.0  # 最后更新时间
+    update_count: int = 0  # 更新次数
     metadata: Dict[str, Any] = field(default_factory=dict)  # 元数据
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典格式"""
         result = asdict(self)
-        result['entity_type'] = self.entity_type.value
-        result['status'] = self.status.value
+        result["entity_type"] = self.entity_type.value
+        result["status"] = self.status.value
         if self.entity:
-            result['entity'] = self.entity.to_dict()
+            result["entity"] = self.entity.to_dict()
         return result
-    
+
     def is_filled(self) -> bool:
         """检查槽位是否已填充"""
-        return self.status in [SlotStatus.FILLED, SlotStatus.CONFIRMED, SlotStatus.UPDATED]
-    
+        return self.status in [
+            SlotStatus.FILLED,
+            SlotStatus.CONFIRMED,
+            SlotStatus.UPDATED,
+        ]
+
     def is_expired(self, expire_time: float = 3600) -> bool:
         """检查槽位是否已过期
-        
+
         Args:
             expire_time: 过期时间（秒）
-            
+
         Returns:
             是否已过期
         """
@@ -93,26 +100,28 @@ class Slot:
 @dataclass
 class DialogueIntent:
     """对话意图数据结构"""
-    intent_type: IntentType      # 意图类型
-    confidence: float            # 置信度
-    timestamp: float             # 时间戳
-    turn_id: int                # 对话轮次ID
+
+    intent_type: IntentType  # 意图类型
+    confidence: float  # 置信度
+    timestamp: float  # 时间戳
+    turn_id: int  # 对话轮次ID
     entities: List[Entity] = field(default_factory=list)  # 相关实体
     metadata: Dict[str, Any] = field(default_factory=dict)  # 元数据
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典格式"""
         result = asdict(self)
-        result['intent_type'] = self.intent_type.value
-        result['entities'] = [entity.to_dict() for entity in self.entities]
+        result["intent_type"] = self.intent_type.value
+        result["entities"] = [entity.to_dict() for entity in self.entities]
         return result
 
 
 @dataclass
 class DialogueState:
     """对话状态数据结构"""
-    session_id: str              # 会话ID
-    turn_count: int = 0          # 对话轮次
+
+    session_id: str  # 会话ID
+    turn_count: int = 0  # 对话轮次
     slots: Dict[str, Slot] = field(default_factory=dict)  # 槽位字典
     intent_history: List[DialogueIntent] = field(default_factory=list)  # 意图历史
     active_entities: Dict[str, Entity] = field(default_factory=dict)  # 活跃实体
@@ -122,35 +131,37 @@ class DialogueState:
     created_at: float = field(default_factory=time.time)  # 创建时间
     last_updated: float = field(default_factory=time.time)  # 最后更新时间
     metadata: Dict[str, Any] = field(default_factory=dict)  # 元数据
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典格式"""
         result = {
-            'session_id': self.session_id,
-            'turn_count': self.turn_count,
-            'slots': {k: v.to_dict() for k, v in self.slots.items()},
-            'intent_history': [intent.to_dict() for intent in self.intent_history],
-            'active_entities': {k: v.to_dict() for k, v in self.active_entities.items()},
-            'entity_history': [entity.to_dict() for entity in self.entity_history],
-            'last_intent': self.last_intent.to_dict() if self.last_intent else None,
-            'context_focus': self.context_focus,
-            'created_at': self.created_at,
-            'last_updated': self.last_updated,
-            'metadata': self.metadata
+            "session_id": self.session_id,
+            "turn_count": self.turn_count,
+            "slots": {k: v.to_dict() for k, v in self.slots.items()},
+            "intent_history": [intent.to_dict() for intent in self.intent_history],
+            "active_entities": {
+                k: v.to_dict() for k, v in self.active_entities.items()
+            },
+            "entity_history": [entity.to_dict() for entity in self.entity_history],
+            "last_intent": self.last_intent.to_dict() if self.last_intent else None,
+            "context_focus": self.context_focus,
+            "created_at": self.created_at,
+            "last_updated": self.last_updated,
+            "metadata": self.metadata,
         }
         return result
 
 
 class SlotManager:
     """槽位管理器
-    
+
     负责槽位的创建、更新、验证和生命周期管理
     """
-    
+
     def __init__(self):
         """初始化槽位管理器"""
         self.logger = get_logger("SlotManager")
-        
+
         # 预定义槽位模板
         self.slot_templates = {
             "hostname": Slot("hostname", EntityType.HOSTNAME),
@@ -162,19 +173,21 @@ class SlotManager:
             "error_code": Slot("error_code", EntityType.ERROR_CODE),
             "product": Slot("product", EntityType.PRODUCT),
         }
-    
-    def fill_slots(self, state: DialogueState, entities: List[Entity]) -> Dict[str, Slot]:
+
+    def fill_slots(
+        self, state: DialogueState, entities: List[Entity]
+    ) -> Dict[str, Slot]:
         """填充槽位
-        
+
         Args:
             state: 对话状态
             entities: 实体列表
-            
+
         Returns:
             更新后的槽位字典
         """
         updated_slots = {}
-        
+
         for entity in entities:
             slot_name = self._get_slot_name_for_entity(entity)
             if slot_name:
@@ -183,7 +196,7 @@ class SlotManager:
                     slot = state.slots[slot_name]
                 else:
                     slot = self._create_slot_from_template(slot_name, entity)
-                
+
                 # 更新槽位
                 old_value = slot.value
                 slot.value = entity.text
@@ -191,24 +204,24 @@ class SlotManager:
                 slot.confidence = entity.confidence
                 slot.last_updated = time.time()
                 slot.update_count += 1
-                
+
                 # 确定槽位状态
                 if old_value != entity.text:
                     slot.status = SlotStatus.UPDATED if old_value else SlotStatus.FILLED
                 else:
                     slot.status = SlotStatus.CONFIRMED
-                
+
                 updated_slots[slot_name] = slot
                 self.logger.debug(f"槽位更新: {slot_name} = {entity.text}")
-        
+
         return updated_slots
-    
+
     def _get_slot_name_for_entity(self, entity: Entity) -> Optional[str]:
         """根据实体类型获取槽位名称
-        
+
         Args:
             entity: 实体对象
-            
+
         Returns:
             槽位名称
         """
@@ -222,16 +235,16 @@ class SlotManager:
             EntityType.ERROR_CODE: "error_code",
             EntityType.PRODUCT: "product",
         }
-        
+
         return entity_to_slot.get(entity.entity_type)
-    
+
     def _create_slot_from_template(self, slot_name: str, entity: Entity) -> Slot:
         """从模板创建槽位
-        
+
         Args:
             slot_name: 槽位名称
             entity: 实体对象
-            
+
         Returns:
             新创建的槽位
         """
@@ -245,7 +258,7 @@ class SlotManager:
                 status=SlotStatus.FILLED,
                 confidence=entity.confidence,
                 last_updated=time.time(),
-                update_count=1
+                update_count=1,
             )
         else:
             # 创建默认槽位
@@ -257,22 +270,24 @@ class SlotManager:
                 status=SlotStatus.FILLED,
                 confidence=entity.confidence,
                 last_updated=time.time(),
-                update_count=1
+                update_count=1,
             )
-    
-    def clean_expired_slots(self, slots: Dict[str, Slot], expire_time: float = 3600) -> Dict[str, Slot]:
+
+    def clean_expired_slots(
+        self, slots: Dict[str, Slot], expire_time: float = 3600
+    ) -> Dict[str, Slot]:
         """清理过期槽位
-        
+
         Args:
             slots: 槽位字典
             expire_time: 过期时间（秒）
-            
+
         Returns:
             清理后的槽位字典
         """
         cleaned_slots = {}
         expired_count = 0
-        
+
         for name, slot in slots.items():
             if slot.is_expired(expire_time):
                 slot.status = SlotStatus.EXPIRED
@@ -280,45 +295,45 @@ class SlotManager:
                 self.logger.debug(f"槽位过期: {name}")
             else:
                 cleaned_slots[name] = slot
-        
+
         if expired_count > 0:
             self.logger.info(f"清理了 {expired_count} 个过期槽位")
-        
+
         return cleaned_slots
-    
+
     def get_filled_slots(self, slots: Dict[str, Slot]) -> Dict[str, Slot]:
         """获取已填充的槽位
-        
+
         Args:
             slots: 槽位字典
-            
+
         Returns:
             已填充的槽位字典
         """
         return {name: slot for name, slot in slots.items() if slot.is_filled()}
-    
+
     def get_slot_summary(self, slots: Dict[str, Slot]) -> Dict[str, Any]:
         """获取槽位摘要信息
-        
+
         Args:
             slots: 槽位字典
-            
+
         Returns:
             槽位摘要
         """
         total_slots = len(slots)
         filled_slots = len(self.get_filled_slots(slots))
-        
+
         status_count = {}
         for slot in slots.values():
             status = slot.status.value
             status_count[status] = status_count.get(status, 0) + 1
-        
+
         return {
             "total_slots": total_slots,
             "filled_slots": filled_slots,
             "fill_rate": filled_slots / total_slots if total_slots > 0 else 0.0,
-            "status_distribution": status_count
+            "status_distribution": status_count,
         }
 
 
@@ -344,8 +359,12 @@ class IntentRecognizer:
             IntentType.CLARIFICATION: ["确认", "澄清", "明确", "具体", "详细"],
         }
 
-    def recognize_intent(self, text: str, entities: List[Entity],
-                        previous_intent: Optional[DialogueIntent] = None) -> DialogueIntent:
+    def recognize_intent(
+        self,
+        text: str,
+        entities: List[Entity],
+        previous_intent: Optional[DialogueIntent] = None,
+    ) -> DialogueIntent:
         """识别对话意图
 
         Args:
@@ -387,7 +406,7 @@ class IntentRecognizer:
             confidence=confidence,
             timestamp=time.time(),
             turn_id=0,  # 将在状态管理器中设置
-            entities=entities
+            entities=entities,
         )
 
     def _is_follow_up_pattern(self, text: str) -> bool:
@@ -422,8 +441,9 @@ class DialogueStateManager:
 
         self.logger.info("对话状态管理器初始化完成")
 
-    def update_state(self, session_id: str, user_input: str,
-                    entities: List[Entity]) -> DialogueState:
+    def update_state(
+        self, session_id: str, user_input: str, entities: List[Entity]
+    ) -> DialogueState:
         """更新对话状态
 
         Args:
@@ -467,7 +487,9 @@ class DialogueStateManager:
             # 更新时间戳
             state.last_updated = time.time()
 
-            self.logger.debug(f"对话状态更新完成: {session_id}, 轮次: {state.turn_count}")
+            self.logger.debug(
+                f"对话状态更新完成: {session_id}, 轮次: {state.turn_count}"
+            )
             return state
 
         except Exception as e:
@@ -509,7 +531,7 @@ class DialogueStateManager:
             # 移除最旧的实体
             sorted_entities = sorted(
                 state.active_entities.items(),
-                key=lambda x: getattr(x[1], 'timestamp', 0)
+                key=lambda x: getattr(x[1], "timestamp", 0),
             )
             for key, _ in sorted_entities[:10]:  # 移除最旧的10个
                 del state.active_entities[key]
@@ -524,7 +546,9 @@ class DialogueStateManager:
         if entities:
             # 选择置信度最高的实体作为焦点
             focus_entity = max(entities, key=lambda x: x.confidence)
-            state.context_focus = f"{focus_entity.entity_type.value}:{focus_entity.text}"
+            state.context_focus = (
+                f"{focus_entity.entity_type.value}:{focus_entity.text}"
+            )
 
     def _cleanup_expired_data(self, state: DialogueState):
         """清理过期数据
@@ -611,9 +635,11 @@ class DialogueStateManager:
             "active_entities_count": len(state.active_entities),
             "entity_history_count": len(state.entity_history),
             "intent_history_count": len(state.intent_history),
-            "last_intent": state.last_intent.intent_type.value if state.last_intent else None,
+            "last_intent": (
+                state.last_intent.intent_type.value if state.last_intent else None
+            ),
             "context_focus": state.context_focus,
             "slot_summary": slot_summary,
             "created_at": state.created_at,
-            "last_updated": state.last_updated
+            "last_updated": state.last_updated,
         }
