@@ -364,7 +364,7 @@ class LLMEntityExtractor:
         lines = response.split("\n")
         for line in lines:
             if ":" in line and any(
-                keyword in line.lower() for keyword in ["实体", "entity", "识别"]
+                    keyword in line.lower() for keyword in ["实体", "entity", "识别"]
             ):
                 # 尝试提取实体信息
                 parts = line.split(":")
@@ -405,11 +405,11 @@ class NERManager:
         self.logger.info("NER管理器初始化完成")
 
     def extract_entities(
-        self,
-        text: str,
-        use_regex: bool = True,
-        use_llm_general: bool = True,
-        use_llm_domain: bool = True,
+            self,
+            text: str,
+            use_regex: bool = True,
+            use_llm_general: bool = True,
+            use_llm_domain: bool = True,
     ) -> List[Entity]:
         """从文本中提取所有实体
 
@@ -536,7 +536,7 @@ class NERManager:
         return merged_entity
 
     def get_entities_by_type(
-        self, entities: List[Entity], entity_type: EntityType
+            self, entities: List[Entity], entity_type: EntityType
     ) -> List[Entity]:
         """根据类型筛选实体
 
@@ -550,7 +550,7 @@ class NERManager:
         return [entity for entity in entities if entity.entity_type == entity_type]
 
     def get_high_confidence_entities(
-        self, entities: List[Entity], threshold: float = 0.8
+            self, entities: List[Entity], threshold: float = 0.8
     ) -> List[Entity]:
         """获取高置信度实体
 

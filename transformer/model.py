@@ -511,7 +511,7 @@ class DecoderLayer(nn.Module):
             self_attn_mask: 自注意力掩码, 两个作用：
             1：防止模型关注无效信息，如填充（padding）位置
             2：防止模型关注未来位置的token，确保因果性
-            cross_attn_mask: 交叉注意力掩码，防止解码器在 cross-attention 阶段关注编码器输出中的 padding 位置
+        cross_attn_mask: 交叉注意力掩码，防止解码器在 cross-attention 阶段关注编码器输出中的 padding 位置
 
         Returns:
             解码器层输出  [batch_size, seq_len, d_model]

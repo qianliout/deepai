@@ -41,16 +41,12 @@ class LLMConfig(BaseModel):
 
 class VectorStoreConfig(BaseModel):
     """向量存储配置"""
-
-    # 通用配置
-    backend: str = Field(default="chromadb", description="向量数据库后端: chromadb, postgresql")
+    
+    persist_directory: str = Field(default="data/vectorstore", description="ChromaDB数据目录")
     collection_name: str = Field(default="knowledge_base", description="集合名称")
     top_k: int = Field(default=5, description="检索返回数量")
     score_threshold: float = Field(default=0.3, description="相似度阈值")
-
-    # ChromaDB配置
-    persist_directory: str = Field(default="data/vectorstore", description="ChromaDB数据目录")
-
+    
     class Config:
         extra = "forbid"
 
@@ -153,78 +149,13 @@ class MySQLConfig(BaseModel):
     host: str = Field(default="localhost", description="MySQL主机地址")
     port: int = Field(default=3306, description="MySQL端口")
     username: str = Field(default="root", description="MySQL用户名")
-    password: str = Field(default="root", description="MySQL密码")
+    password: str = Field(default="", description="MySQL密码")
     database: str = Field(default="rag_system", description="数据库名称")
     charset: str = Field(default="utf8mb4", description="字符集")
     autocommit: bool = Field(default=True, description="是否自动提交")
     pool_size: int = Field(default=10, description="连接池大小")
     max_overflow: int = Field(default=20, description="连接池最大溢出")
     pool_timeout: int = Field(default=30, description="连接池超时时间")
-
-    class Config:
-        extra = "forbid"
-
-
-class PostgreSQLConfig(BaseModel):
-    """PostgreSQL向量数据库配置"""
-
-    host: str = Field(default="localhost", description="PostgreSQL主机地址")
-    port: int = Field(default=5432, description="PostgreSQL端口")
-    username: str = Field(default="postgres", description="PostgreSQL用户名")
-    password: str = Field(default="postgres", description="PostgreSQL密码")
-    database: str = Field(default="rag_vectordb", description="向量数据库名称")
-    table_name: str = Field(default="documents", description="文档表名称")
-    vector_dimension: int = Field(default=512, description="向量维度")
-    pool_size: int = Field(default=10, description="连接池大小")
-    max_overflow: int = Field(default=20, description="连接池最大溢出")
-    pool_timeout: int = Field(default=30, description="连接池超时时间")
-
-    class Config:
-        extra = "forbid"
-
-
-class RerankerConfig(BaseModel):
-    """重排序器配置"""
-
-    # 双编码器配置
-    bi_encoder_model: str = Field(default="BAAI/bge-reranker-base", description="双编码器模型名称")
-    bi_encoder_enabled: bool = Field(default=True, description="是否启用双编码器")
-    bi_encoder_top_k: int = Field(default=20, description="双编码器筛选的候选数量")
-
-    # 交叉编码器配置
-    cross_encoder_model: str = Field(default="BAAI/bge-reranker-v2-m3", description="交叉编码器模型名称")
-    cross_encoder_enabled: bool = Field(default=True, description="是否启用交叉编码器")
-    cross_encoder_top_k: int = Field(default=10, description="交叉编码器最终返回数量")
-
-    # 通用配置
-    device: str = Field(default="auto", description="计算设备")
-    batch_size: int = Field(default=16, description="批处理大小")
-    cache_dir: str = Field(default="/Users/liuqianli/.cache/huggingface/hub", description="模型缓存目录")
-
-    # 分数融合配置
-    fusion_method: str = Field(default="weighted", description="分数融合方法: weighted, rrf, max")
-    bi_encoder_weight: float = Field(default=0.3, description="双编码器权重")
-    cross_encoder_weight: float = Field(default=0.7, description="交叉编码器权重")
-    original_weight: float = Field(default=0.2, description="原始检索分数权重")
-
-    class Config:
-        extra = "forbid"
-
-
-class Neo4jConfig(BaseModel):
-    """Neo4j图数据库配置"""
-
-    uri: str = Field(default="bolt://localhost:7687", description="Neo4j连接URI")
-    username: str = Field(default="neo4j", description="用户名")
-    password: str = Field(default="aiops123456", description="密码")
-    database: str = Field(default="neo4j", description="数据库名称")
-    max_connection_lifetime: int = Field(default=3600, description="连接最大生存时间(秒)")
-    max_connection_pool_size: int = Field(default=50, description="连接池最大大小")
-    connection_timeout: int = Field(default=30, description="连接超时时间(秒)")
-    max_transaction_retry_time: int = Field(default=30, description="事务最大重试时间(秒)")
-    resolver_address: str = Field(default="", description="DNS解析器地址")
-    encrypted: bool = Field(default=False, description="是否启用加密连接")
-    trust: str = Field(default="TRUST_ALL_CERTIFICATES", description="证书信任策略")
 
     class Config:
         extra = "forbid"
@@ -342,9 +273,6 @@ class Config(BaseModel):
     redis: RedisConfig = Field(default_factory=RedisConfig)
     elasticsearch: ElasticsearchConfig = Field(default_factory=ElasticsearchConfig)
     mysql: MySQLConfig = Field(default_factory=MySQLConfig)
-    postgresql: PostgreSQLConfig = Field(default_factory=PostgreSQLConfig)
-    reranker: RerankerConfig = Field(default_factory=RerankerConfig)
-    neo4j: Neo4jConfig = Field(default_factory=Neo4jConfig)
 
 # 默认配置实例
 defaultConfig = Config()
