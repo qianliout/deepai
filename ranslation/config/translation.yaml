@@ -1,0 +1,52 @@
+# Translation System Configuration
+# 翻译系统配置文件
+
+# Model configuration
+# 模型配置
+model:
+  provider: "ollama"  # ollama, openai, claude, qwen
+  name: "qwen3:8b"
+
+# API configurations
+# API配置
+api:
+  # Ollama configuration
+  ollama_url: "http://localhost:11434"
+  
+  # OpenAI configuration (set via environment variable OPENAI_API_KEY)
+  openai_api_key: null
+  openai_base_url: "https://api.openai.com/v1"
+  
+  # Claude configuration (set via environment variable CLAUDE_API_KEY)
+  claude_api_key: null
+  
+  # Qwen configuration (set via environment variable QWEN_API_KEY)
+  qwen_api_key: null
+  qwen_base_url: "https://dashscope.aliyuncs.com/api/v1"
+
+# Translation settings
+# 翻译设置
+translation:
+  max_file_size: 102400  # Maximum file size in bytes (100KB)
+  max_concurrent: 3      # Maximum concurrent translations
+  temperature: 0.3       # Model temperature (0.0-1.0)
+  max_tokens: 4000       # Maximum tokens per request
+  source_lang: "en"      # Source language
+  target_lang: "zh"      # Target language
+
+# File processing settings
+# 文件处理设置
+file:
+  supported_extensions: [".md", ".markdown"]
+  create_backup: true           # Create backup of original files
+  validate_translation: true    # Validate translated files
+  output_suffix: "_zh"         # Suffix for translated files
+
+# Logging settings
+# 日志设置
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "./logs/translation.log"  # Log file path (null to disable)
+  max_size: 10485760  # Maximum log file size in bytes (10MB)
+  backup_count: 5     # Number of backup log files to keep

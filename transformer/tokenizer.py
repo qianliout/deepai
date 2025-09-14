@@ -96,7 +96,7 @@ class SimpleTokenizer:
         texts: List[str],
         lang: str,
         min_freq: int = 2,
-        max_vocab_size: int = 100000,
+        max_vocab_size: int = 1000000,
     ) -> Dict[str, int]:
         """
         构建词典

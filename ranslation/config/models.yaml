@@ -1,0 +1,77 @@
+# Model configurations for different LLM providers
+
+ollama:
+  qwen2.5:7b:
+    name: "qwen2.5:7b"
+    provider: "ollama"
+    base_url: "http://localhost:11434"
+    description: "Qwen2.5 7B model via Ollama"
+    max_tokens: 4000
+    temperature: 0.3
+    
+  qwen2.5:14b:
+    name: "qwen2.5:14b"
+    provider: "ollama"
+    base_url: "http://localhost:11434"
+    description: "Qwen2.5 14B model via Ollama"
+    max_tokens: 4000
+    temperature: 0.3
+    
+  llama3.1:8b:
+    name: "llama3.1:8b"
+    provider: "ollama"
+    base_url: "http://localhost:11434"
+    description: "Llama 3.1 8B model via Ollama"
+    max_tokens: 4000
+    temperature: 0.3
+
+openai:
+  gpt-4:
+    name: "gpt-4"
+    provider: "openai"
+    base_url: "https://api.openai.com/v1"
+    description: "GPT-4 via OpenAI API"
+    max_tokens: 4000
+    temperature: 0.3
+    
+  gpt-3.5-turbo:
+    name: "gpt-3.5-turbo"
+    provider: "openai"
+    base_url: "https://api.openai.com/v1"
+    description: "GPT-3.5 Turbo via OpenAI API"
+    max_tokens: 4000
+    temperature: 0.3
+
+claude:
+  claude-3-sonnet-20240229:
+    name: "claude-3-sonnet-20240229"
+    provider: "claude"
+    base_url: "https://api.anthropic.com"
+    description: "Claude 3 Sonnet via Anthropic API"
+    max_tokens: 4000
+    temperature: 0.3
+    
+  claude-3-haiku-20240307:
+    name: "claude-3-haiku-20240307"
+    provider: "claude"
+    base_url: "https://api.anthropic.com"
+    description: "Claude 3 Haiku via Anthropic API"
+    max_tokens: 4000
+    temperature: 0.3
+
+qwen:
+  qwen-turbo:
+    name: "qwen-turbo"
+    provider: "qwen"
+    base_url: "https://dashscope.aliyuncs.com/api/v1"
+    description: "Qwen Turbo via Alibaba Cloud API"
+    max_tokens: 4000
+    temperature: 0.3
+    
+  qwen-plus:
+    name: "qwen-plus"
+    provider: "qwen"
+    base_url: "https://dashscope.aliyuncs.com/api/v1"
+    description: "Qwen Plus via Alibaba Cloud API"
+    max_tokens: 4000
+    temperature: 0.3
